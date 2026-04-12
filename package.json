@@ -1,0 +1,42 @@
+{
+  "name": "@tosiiko/cup",
+  "version": "0.1.3",
+  "description": "CUP universal UI runtime for protocol-driven browser rendering",
+  "type": "module",
+  "main": "./dist/index.js",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "schema",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js"
+    },
+    "./schema/uiview.v1.json": "./schema/uiview.v1.json"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "npm run build && npm run test",
+    "demo:build": "vite build examples/demo --outDir ../../dist-demo",
+    "demo:dev": "vite examples/demo",
+    "pack:check": "npm_config_cache=/tmp/cup-npm-cache npm pack --dry-run",
+    "test": "npm run test:ts && npm run test:python && npm run test:go",
+    "test:go": "cd adapters/go && GOCACHE=/tmp/cup-go-cache go test ./...",
+    "test:python": "python3 -m unittest discover -s adapters/python/tests -p 'test_*.py'",
+    "test:ts": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "esbuild": "^0.21.5",
+    "jsdom": "^24.1.3",
+    "typescript": "^5.4.0",
+    "vite": "^5.2.0",
+    "vitest": "^1.6.1"
+  }
+}

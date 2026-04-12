@@ -1,0 +1,64 @@
+<div class="crm-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">C</div>
+      <span>CUP CRM</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      {% for item in nav %}
+        {% if item.allowed %}
+          <a href="{{ item.href }}" data-link class="{% if item.active %}nav-link nav-link--active{% else %}nav-link{% endif %}">
+            <span>{{ item.label }}</span>
+            {% if item.badge %}<span class="nav-pill">{{ item.badge }}</span>{% endif %}
+          </a>
+        {% else %}
+          <div class="nav-link-locked">
+            <span>{{ item.label }}</span>
+            <span class="muted">Locked</span>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </nav>
+
+    <div class="sidebar-card">
+      <div class="section-title">Signed-in workspace</div>
+      <p>{{ display_name }} | {{ role }}</p>
+      <p class="helper">Team: {{ team }}</p>
+      <p class="helper">Region: {{ region }}</p>
+      <p class="helper">MFA verified: {% if mfa_verified %}Yes{% else %}No{% endif %}</p>
+    </div>
+  </aside>
+
+  <main class="main">
+    <section class="topbar">
+      <div class="topbar-copy">
+        <div class="section-title">{{ title }}</div>
+        <h1>{{ heading }}</h1>
+        <p>{{ subheading }}</p>
+      </div>
+
+      <div class="topbar-meta">
+        <div class="summary-card">
+          <div class="section-title">Current operator</div>
+          <h2>{{ display_name }}</h2>
+          <p>{{ role }}</p>
+        </div>
+
+        <form data-form-kind="logout" data-pending-label="Signing out..." class="actions">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+          <button class="button-ghost" type="submit">Sign out</button>
+        </form>
+      </div>
+    </section>
+
+    {% if notice %}
+      <div class="banner banner--success">{{ notice }}</div>
+    {% endif %}
+    {% if error %}
+      <div class="banner banner--error">{{ error }}</div>
+    {% endif %}
+
+    <!-- PAGE_CONTENT -->
+  </main>
+</div>

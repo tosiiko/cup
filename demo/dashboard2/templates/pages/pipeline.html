@@ -1,0 +1,123 @@
+<section class="split-grid">
+  <div class="panel">
+    <div class="section-title">Create opportunity</div>
+    <h2>Capture new pipeline safely</h2>
+    <p>Only users with pipeline edit permissions can submit this form. The backend applies session, CSRF, and approval-threshold checks before returning the next CUP view.</p>
+
+    <form class="form-grid" data-form-kind="create_lead" data-pending-label="Creating...">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+
+      <div class="form-row">
+        <div>
+          <label class="helper" for="company">Company</label>
+          <input class="input" id="company" name="company" placeholder="Northwind Cargo" required />
+        </div>
+        <div>
+          <label class="helper" for="contact">Primary contact</label>
+          <input class="input" id="contact" name="contact" placeholder="Grace Ayo" required />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div>
+          <label class="helper" for="owner">Owner</label>
+          <input class="input" id="owner" name="owner" placeholder="Amara Nanteza" required />
+        </div>
+        <div>
+          <label class="helper" for="value">Opportunity value</label>
+          <input class="input" id="value" name="value" type="number" min="1" step="0.01" placeholder="180000" required />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div>
+          <label class="helper" for="stage">Stage</label>
+          <select class="select" id="stage" name="stage" required>
+            {% for option in stage_options %}
+              <option value="{{ option }}">{{ option }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="helper" for="note">Context note</label>
+          <input class="input" id="note" name="note" placeholder="Why now, who cares, what changed" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="button" type="submit">Create opportunity</button>
+        <span class="helper">Deals above {{ approval_threshold }} require executive approval and are intentionally blocked in this demo.</span>
+      </div>
+    </form>
+  </div>
+
+  <div class="summary-card">
+    <div class="section-title">Pipeline control model</div>
+    <h2>Guardrails on creation</h2>
+    <p>Every mutation route is protected with a CSRF token and permission check. The page itself stays in templates while Python owns validation and state transitions.</p>
+  </div>
+</section>
+
+<section class="pipeline-board">
+  {% for column in columns %}
+    <div class="stage-column">
+      <div class="stage-head">
+        <div>
+          <div class="section-title">{{ column.label }}</div>
+          <h2>{{ column.count }}</h2>
+        </div>
+        <div class="stage-total">{{ column.total }}</div>
+      </div>
+      <p class="helper">{{ column.hint }}</p>
+
+      <div class="stack">
+        {% if column.empty %}
+          <div class="empty-state">No opportunities in this stage.</div>
+        {% endif %}
+        {% for deal in column.deals %}
+          <div class="deal-card">
+            <div class="deal-top">
+              <div>
+                <div class="amount">{{ deal.title }}</div>
+                <div class="table-note">{{ deal.company }}</div>
+              </div>
+              <span class="{{ deal.health_class }}">{{ deal.health }}</span>
+            </div>
+            <div class="deal-meta">
+              <span>{{ deal.owner }}</span>
+              <span>{{ deal.value }}</span>
+            </div>
+            <div class="table-note">{{ deal.close_date }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+</section>
+
+<section class="table-card">
+  <div class="section-title">Newest opportunities</div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Opportunity</th>
+        <th>Stage</th>
+        <th>Owner</th>
+        <th>Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for lead in recent_leads %}
+        <tr>
+          <td>
+            <div class="amount">{{ lead.title }}</div>
+            <div class="table-note">{{ lead.company }}</div>
+          </td>
+          <td>{{ lead.stage }}</td>
+          <td>{{ lead.owner }}</td>
+          <td>{{ lead.value }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>

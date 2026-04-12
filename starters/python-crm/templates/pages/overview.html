@@ -1,0 +1,76 @@
+<section class="metric-grid">
+  {% for metric in metrics %}
+    <div class="metric-card">
+      <div class="section-title">{{ metric.label }}</div>
+      <div class="metric-value">{{ metric.value }}</div>
+      <p class="{{ metric.meta_class }}">{{ metric.meta }}</p>
+    </div>
+  {% endfor %}
+</section>
+
+<section class="split-grid">
+  <div class="table-card">
+    <div class="section-title">Priority accounts</div>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Account</th>
+          <th>Owner</th>
+          <th>Next move</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for account in accounts %}
+          <tr>
+            <td>{{ account.name }}</td>
+            <td>{{ account.owner }}</td>
+            <td>{{ account.value }}</td>
+            <td><span class="{{ account.status_class }}">{{ account.status }}</span></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="table-card">
+    <div class="section-title">Playbook queue</div>
+    <div class="list">
+      {% for item in playbooks %}
+        <div class="list-item">
+          <div>
+            <div class="amount">{{ item.title }}</div>
+            <div class="table-note">{{ item.detail }}</div>
+          </div>
+          <span class="{{ item.status_class }}">{{ item.status }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="table-card">
+  <div class="section-title">Recent security and workflow activity</div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Event</th>
+        <th>User</th>
+        <th>Outcome</th>
+        <th>Detail</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in activity %}
+        <tr>
+          <td>{{ item.timestamp }}</td>
+          <td>{{ item.event }}</td>
+          <td>{{ item.username }}</td>
+          <td><span class="{{ item.outcome_class }}">{{ item.outcome }}</span></td>
+          <td>{{ item.detail }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>

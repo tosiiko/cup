@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cup-protocol.dev/schema/uiview/v1",
+  "title": "UIView",
+  "description": "CUP universal UI contract. Any backend language produces this JSON; the CUP TypeScript runtime renders it.",
+  "type": "object",
+  "required": ["template", "state"],
+  "additionalProperties": false,
+
+  "properties": {
+
+    "template": {
+      "type": "string",
+      "description": "Django-style template string. Supports {{ var }}, {% if %}, {% for %}, {% elif %}, {% else %}."
+    },
+
+    "state": {
+      "type": "object",
+      "description": "Flat or nested data model. All values must be JSON-serialisable.",
+      "additionalProperties": true
+    },
+
+    "actions": {
+      "type": "object",
+      "description": "Named actions bound to data-action attributes in the template. Values are ActionDescriptors.",
+      "additionalProperties": { "$ref": "#/$defs/ActionDescriptor" }
+    },
+
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  },
+
+  "$defs": {
+
+    "ActionDescriptor": {
+      "description": "Describes what happens when a data-action is triggered.",
+      "oneOf": [
+        { "$ref": "#/$defs/FetchAction" },
+        { "$ref": "#/$defs/EmitAction" },
+        { "$ref": "#/$defs/NavigateAction" }
+      ]
+    },
+
+    "FetchAction": {
+      "type": "object",
+      "description": "POST/GET to a server endpoint. The response must be a UIView; the runtime remounts with it.",
+      "required": ["type", "url"],
+      "additionalProperties": false,
+      "properties": {
+        "type":    { "const": "fetch" },
+        "url":     { "type": "string", "description": "Endpoint URL (absolute or relative)." },
+        "method":  { "type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"], "default": "POST" },
+        "payload": {
+          "type": "object",
+          "description": "Extra key/value pairs merged into the request body alongside the current state snapshot.",
+          "additionalProperties": true
+        }
+      }
+    },
+
+    "EmitAction": {
+      "type": "object",
+      "description": "Dispatches a CustomEvent on the container element. Useful for parent-level listeners.",
+      "required": ["type", "event"],
+      "additionalProperties": false,
+      "properties": {
+        "type":   { "const": "emit" },
+        "event":  { "type": "string", "description": "CustomEvent name." },
+        "detail": { "type": "object", "additionalProperties": true }
+      }
+    },
+
+    "NavigateAction": {
+      "type": "object",
+      "description": "Client-side navigation via the History API.",
+      "required": ["type", "url"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "navigate" },
+        "url":  { "type": "string" },
+        "replace": { "type": "boolean", "default": false }
+      }
+    },
+
+    "Meta": {
+      "type": "object",
+      "description": "Optional metadata about this view.",
+      "additionalProperties": false,
+      "properties": {
+        "version":   { "type": "string", "description": "Schema version. Must be '1'.", "const": "1" },
+        "lang":      { "type": "string", "description": "Backend language that produced this view, e.g. 'python', 'go', 'rust'." },
+        "generator": { "type": "string", "description": "Adapter name + version, e.g. 'cup-python/0.1.0'." },
+        "title":     { "type": "string", "description": "Human-readable view title for devtools." },
+        "route":     { "type": "string", "description": "The server route that produced this view." }
+      }
+    }
+  }
+}

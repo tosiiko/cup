@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CUP Python Login Demo</title>
+  <style>
+    :root {
+      --bg: #f4efe6;
+      --panel: rgba(255, 255, 255, 0.82);
+      --border: rgba(102, 70, 30, 0.12);
+      --text: #24180d;
+      --muted: #76634f;
+      --accent: #b05c2f;
+      --accent-strong: #8d4019;
+      --accent-soft: #f3ded0;
+      --danger-bg: #fff0ee;
+      --danger-text: #8f2e22;
+      --success-bg: #eef8ef;
+      --success-text: #24653a;
+      --shadow: 0 24px 50px rgba(53, 31, 8, 0.12);
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,0.9), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(176,92,47,0.16), transparent 32%),
+        linear-gradient(160deg, #efe2d0 0%, #f8f4ec 45%, #efe6d8 100%);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .frame {
+      width: min(100%, 920px);
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .hero {
+      padding: 48px;
+      background:
+        linear-gradient(180deg, rgba(36,24,13,0.06), transparent 60%),
+        linear-gradient(135deg, #f5e4d4 0%, #ead2bb 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 32px;
+    }
+
+    .badge {
+      display: inline-flex;
+      width: fit-content;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.66);
+      border: 1px solid rgba(36,24,13,0.08);
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(2.6rem, 5vw, 4.5rem);
+      line-height: 0.96;
+      letter-spacing: -0.05em;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 26rem;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .meta-card {
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(36,24,13,0.08);
+    }
+
+    .meta-card strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .meta-card span {
+      font-size: 0.98rem;
+      font-weight: 600;
+    }
+
+    .app-shell {
+      padding: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.65);
+    }
+
+    #app {
+      width: 100%;
+      min-height: 520px;
+    }
+
+    .loading {
+      width: 100%;
+      min-height: 520px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 0.95rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 900px) {
+      .frame {
+        grid-template-columns: 1fr;
+      }
+
+      .hero, .app-shell {
+        padding: 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <section class="hero">
+      <div>
+        <span class="badge">CUP + Python</span>
+        <h1>Login flow built with protocol views.</h1>
+      </div>
+
+      <p>
+        The backend returns CUP JSON, the browser runtime mounts it, and a tiny bridge
+        sends form values back to Python for the next view.
+      </p>
+
+      <div class="meta">
+        <div class="meta-card">
+          <strong>Username</strong>
+          <span>demo</span>
+        </div>
+        <div class="meta-card">
+          <strong>Password</strong>
+          <span>cup123</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="app-shell">
+      <div id="app">
+        <div class="loading">Loading CUP view…</div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { mountRemoteView, validateProtocolView } from '/dist/index.js';
+
+    const app = document.getElementById('app');
+
+    async function requestView(url, init = {}) {
+      const response = await fetch(url, {
+        headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
+        ...init,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+      }
+
+      const view = validateProtocolView(await response.json());
+      mountRemoteView(view, app);
+      return view;
+    }
+
+    async function submitLogin() {
+      const form = app.querySelector('[data-login-form]');
+      if (!(form instanceof HTMLFormElement)) return;
+
+      const button = form.querySelector('[data-login-button]');
+      if (button instanceof HTMLButtonElement) {
+        button.disabled = true;
+        button.textContent = 'Signing in...';
+      }
+
+      const data = new FormData(form);
+      const payload = {
+        username: String(data.get('username') ?? ''),
+        password: String(data.get('password') ?? ''),
+      };
+
+      try {
+        await requestView('/api/login', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+      } finally {
+        if (button instanceof HTMLButtonElement) {
+          button.disabled = false;
+          button.textContent = 'Sign in';
+        }
+      }
+    }
+
+    async function resetLogin() {
+      await requestView('/api/view');
+    }
+
+    app.addEventListener('cup-login-submit', () => {
+      void submitLogin().catch(showError);
+    });
+
+    app.addEventListener('cup-login-reset', () => {
+      void resetLogin().catch(showError);
+    });
+
+    app.addEventListener('submit', (event) => {
+      const form = event.target;
+      if (form instanceof HTMLFormElement && form.matches('[data-login-form]')) {
+        event.preventDefault();
+        void submitLogin().catch(showError);
+      }
+    });
+
+    function showError(error) {
+      console.error('[CUP Demo] request failed', error);
+      app.innerHTML = `
+        <div style="padding:32px;border-radius:24px;background:#fff;border:1px solid rgba(143,46,34,0.12);">
+          <h2 style="margin:0 0 12px;">Demo error</h2>
+          <p style="margin:0;color:#8f2e22;">${String(error.message ?? error)}</p>
+        </div>
+      `;
+    }
+
+    requestView('/api/view').catch(showError);
+  </script>
+</body>
+</html>

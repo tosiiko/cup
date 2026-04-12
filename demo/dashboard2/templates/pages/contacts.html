@@ -1,0 +1,54 @@
+<section class="split-grid">
+  <div class="table-card">
+    <div class="section-title">Stakeholder map</div>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Contact</th>
+          <th>Company</th>
+          <th>Last touch</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for contact in contacts %}
+          <tr>
+            <td>
+              <div class="amount">{{ contact.name }}</div>
+              <div class="table-note">{{ contact.title }}</div>
+            </td>
+            <td>{{ contact.company }}</td>
+            <td>{{ contact.last_touch }}</td>
+            <td><span class="{{ contact.temperature_class }}">{{ contact.temperature }}</span></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="table-card">
+    <div class="section-title">Relationship signals</div>
+    <div class="list">
+      {% for signal in signals %}
+        <div class="list-item">
+          <div>
+            <div class="amount">{{ signal.label }}</div>
+            <div class="table-note">{{ signal.value }}</div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="contact-grid">
+  {% for contact in contacts %}
+    <div class="panel">
+      <div class="section-title">{{ contact.company }}</div>
+      <h2>{{ contact.name }}</h2>
+      <p>{{ contact.title }}</p>
+      <p class="helper">Next step: {{ contact.next_step }}</p>
+      <span class="{{ contact.temperature_class }}">{{ contact.temperature }}</span>
+    </div>
+  {% endfor %}
+</section>

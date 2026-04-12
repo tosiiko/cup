@@ -1,0 +1,96 @@
+<section class="split-grid">
+  <div class="security-card">
+    <div class="section-title">Current session</div>
+    <h2>{{ display_name }}</h2>
+    <p>{{ role }} | {{ region }}</p>
+    <div class="list">
+      <div class="list-item">
+        <div>
+          <div class="amount">Session created</div>
+          <div class="table-note">{{ session_created }}</div>
+        </div>
+        <span class="code">{{ session_id_short }}</span>
+      </div>
+      <div class="list-item">
+        <div>
+          <div class="amount">Last activity</div>
+          <div class="table-note">{{ last_seen }}</div>
+        </div>
+        <span class="{% if mfa_verified %}status-pill status-pill--ok{% else %}status-pill status-pill--warn{% endif %}">
+          {% if mfa_verified %}MFA verified{% else %}MFA pending{% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="security-card">
+    <div class="section-title">Session controls</div>
+    <div class="stack">
+      <form data-form-kind="rotate_session" data-pending-label="Rotating...">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+        <button class="button-secondary" type="submit">Rotate session + CSRF token</button>
+      </form>
+      <form data-form-kind="terminate_other_sessions" data-pending-label="Terminating...">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+        <button class="button-ghost" type="submit">Terminate other sessions</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<section class="split-grid">
+  <div class="table-card">
+    <div class="section-title">Security controls</div>
+    <div class="list">
+      {% for control in controls %}
+        <div class="list-item">
+          <div>
+            <div class="amount">{{ control.label }}</div>
+            <div class="table-note">{{ control.value }}</div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="section-title">User sessions</div>
+    <div class="list">
+      {% for item in user_sessions %}
+        <div class="list-item">
+          <div>
+            <div class="amount">{{ item.label }}</div>
+            <div class="table-note">{{ item.meta }}</div>
+          </div>
+          <span class="{{ item.status_class }}">{{ item.status }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="table-card">
+  <div class="section-title">Audit trail</div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Event</th>
+        <th>User</th>
+        <th>Outcome</th>
+        <th>Detail</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for event in audit_events %}
+        <tr>
+          <td>{{ event.timestamp }}</td>
+          <td>{{ event.event }}</td>
+          <td>{{ event.username }}</td>
+          <td><span class="{{ event.outcome_class }}">{{ event.outcome }}</span></td>
+          <td>{{ event.detail }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>

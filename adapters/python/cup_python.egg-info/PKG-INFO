@@ -1,0 +1,29 @@
+Metadata-Version: 2.4
+Name: cup-python
+Version: 0.1.0
+Summary: Python adapter for the CUP protocol
+Author: CUP contributors
+License-Expression: MIT
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+
+# cup-python
+
+Python adapter for the CUP protocol.
+
+## Features
+
+- Fluent `UIView` builder
+- `validate_view()` helper
+- JSON response helpers for common Python web frameworks
+
+## Example
+
+```python
+from cup import UIView, FetchAction, validate_view
+
+view = UIView("<h1>{{ title }}</h1>").state(title="Hello")
+validate_view(view)
+```

@@ -1,0 +1,71 @@
+<div class="auth-layout">
+  <section class="auth-hero">
+    <div class="stack">
+      <div class="brand">
+        <div class="brand-mark">C</div>
+        <span>{{ app_name }}</span>
+      </div>
+
+      <div class="auth-copy">
+        <h1>Customer revenue intelligence, served as secure CUP protocol views.</h1>
+        <p>
+          This CRM demo is the first properly structured CUP app in the repo:
+          templates live in files, backend logic is split into modules, and the browser
+          still mounts clean protocol views.
+        </p>
+      </div>
+    </div>
+
+    <div class="feature-grid">
+      {% for feature in features %}
+        <div class="feature-card">
+          <strong>{{ feature.label }}</strong>
+          <p>{{ feature.value }}</p>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="demo-users">
+      {% for account in demo_accounts %}
+        <div class="demo-card">
+          <strong>{{ account.role }}</strong>
+          <p>{{ account.username }}</p>
+          <p class="muted">{{ account.password }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="auth-panel">
+    <div class="panel login-card">
+      <div class="section-title">Secure Sign-In</div>
+      <h2>Open the CRM workspace</h2>
+      <p>Use one of the demo users to load the protected CRM routes.</p>
+
+      {% if notice %}
+        <div class="banner banner--success">{{ notice }}</div>
+      {% endif %}
+      {% if error %}
+        <div class="banner banner--error">{{ error }}</div>
+      {% endif %}
+
+      <form class="stack" data-form-kind="login" data-pending-label="Verifying...">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+
+        <div class="field-grid">
+          <div class="field">
+            <label for="username">Username</label>
+            <input class="input" id="username" name="username" autocomplete="username" value="{{ username }}" />
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <input class="input" id="password" name="password" type="password" autocomplete="current-password" />
+          </div>
+        </div>
+
+        <button class="button" type="submit">Sign in</button>
+        <p class="helper">Security controls active: CSRF, signed cookies, throttling, no-store responses, and role-based page checks.</p>
+      </form>
+    </div>
+  </section>
+</div>

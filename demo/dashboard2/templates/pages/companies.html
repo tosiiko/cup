@@ -1,0 +1,38 @@
+<section class="info-grid">
+  {% for segment in segments %}
+    <div class="summary-card">
+      <div class="section-title">{{ segment.segment }}</div>
+      <h2>{{ segment.accounts }}</h2>
+      <p>{{ segment.trend }}</p>
+    </div>
+  {% endfor %}
+</section>
+
+<section class="table-card">
+  <div class="section-title">Managed companies</div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Company</th>
+        <th>Segment</th>
+        <th>Owner</th>
+        <th>ARR</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for company in companies %}
+        <tr>
+          <td>
+            <div class="amount">{{ company.name }}</div>
+            <div class="table-note">{{ company.next_step }}</div>
+          </td>
+          <td>{{ company.segment }}</td>
+          <td>{{ company.owner }}</td>
+          <td>{{ company.arr }}</td>
+          <td><span class="{{ company.health_class }}">{{ company.health }}</span></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>

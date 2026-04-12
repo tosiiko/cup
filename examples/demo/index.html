@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CUP Demo — Production-ready runtime</title>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root.theme-dark {
+      --bg: #0f0f13; --surface: #1a1a24; --border: #2a2a3a;
+      --text: #e8e8f0; --text-muted: #666;
+      --accent: #4f46e5; --accent-soft: #1a1a30; --accent-text: #7c7cff;
+      --danger: #f66; --success: #6db86d;
+      --warn-bg: #2e1a1a; --warn-border: #5a2a2a;
+      --ok-bg: #1a2e1a; --ok-border: #2a5a2a;
+      --nav-bg: #13131a;
+    }
+    :root.theme-light {
+      --bg: #f4f4f8; --surface: #fff; --border: #dcdce8;
+      --text: #111118; --text-muted: #888;
+      --accent: #4f46e5; --accent-soft: #eeeeff; --accent-text: #4f46e5;
+      --danger: #c00; --success: #080;
+      --warn-bg: #fff0f0; --warn-border: #f99;
+      --ok-bg: #f0fff0; --ok-border: #9f9;
+      --nav-bg: #ebebf3;
+    }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* ── App shell (persists across routes) ─── */
+    .shell {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 100vh;
+    }
+
+    /* ── Top nav ─────────────────────────────── */
+    .topnav {
+      background: var(--nav-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    .nav-brand {
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: var(--accent-text);
+      margin-right: 2rem;
+      letter-spacing: -0.02em;
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 0.1rem;
+      flex: 1;
+    }
+
+    .nav-link {
+      padding: 0.4rem 0.85rem;
+      border-radius: 7px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: background 0.15s, color 0.15s;
+      cursor: pointer;
+      border: none;
+      background: none;
+    }
+
+    .nav-link:hover { background: var(--surface); color: var(--text); }
+
+    /* active class set by router current signal */
+    .nav-link.active {
+      background: var(--accent-soft);
+      color: var(--accent-text);
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-left: auto;
+    }
+
+    .nav-path {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: monospace;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 0.2rem 0.6rem;
+      min-width: 120px;
+      text-align: center;
+      transition: background 0.3s;
+    }
+
+    .theme-btn {
+      background: var(--surface); border: 1px solid var(--border); color: var(--text);
+      border-radius: 7px; padding: 0.35rem 0.75rem; font-size: 0.8rem;
+      cursor: pointer; transition: background 0.3s; white-space: nowrap;
+    }
+
+    /* ── Route outlet ── */
+    .outlet {
+      padding: 2rem;
+      position: relative;
+      overflow: hidden; /* required for slide transition */
+    }
+
+    /* ── CSS view transitions — JS only sets/removes these classes ── */
+
+    /* Fade */
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to   { opacity: 0; }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .route-exit-fade  { animation: fadeOut 0.18s ease forwards; }
+    .route-enter-fade { animation: fadeIn  0.22s ease forwards; }
+
+    /* Slide */
+    @keyframes slideOutLeft {
+      from { transform: translateX(0);      opacity: 1; }
+      to   { transform: translateX(-28px);  opacity: 0; }
+    }
+    @keyframes slideInRight {
+      from { transform: translateX(28px);   opacity: 0; }
+      to   { transform: translateX(0);      opacity: 1; }
+    }
+
+    .route-exit-slide  { animation: slideOutLeft  0.18s ease forwards; }
+    .route-enter-slide { animation: slideInRight  0.22s ease forwards; }
+
+    /* ── Shared page styles ── */
+    .page-header { margin-bottom: 2rem; }
+    .page-header h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; }
+    .page-header p  { margin-top: 0.4rem; color: var(--text-muted); font-size: 0.9rem; }
+
+    .section {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.5rem; margin-bottom: 1.25rem;
+      transition: background 0.3s, border-color 0.3s;
+    }
+    .section h2 {
+      font-size: 0.8rem; font-weight: 600; color: var(--text-muted);
+      margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.08em;
+    }
+
+    /* ── Stat cards ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.25rem;
+      transition: border-color 0.2s, background 0.3s;
+    }
+    .card:hover { border-color: var(--accent); }
+    .card .clabel { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.3rem; }
+    .card .cvalue { font-size: 1.8rem; font-weight: 700; }
+    .card .csub   { font-size: 0.75rem; color: var(--success); margin-top: 0.2rem; }
+
+    /* ── User list ── */
+    .user-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+    .user-item {
+      display: flex; align-items: center; gap: 1rem;
+      padding: 0.75rem 1rem; background: var(--bg);
+      border-radius: 10px; border: 1px solid var(--border);
+      text-decoration: none; color: var(--text);
+      transition: border-color 0.15s, background 0.15s;
+      cursor: pointer;
+    }
+    .user-item:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+    .avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.875rem; flex-shrink: 0;
+    }
+    .user-name { font-weight: 600; font-size: 0.9rem; }
+    .user-role { font-size: 0.75rem; color: var(--text-muted); }
+    .user-arrow { margin-left: auto; color: var(--text-muted); }
+
+    /* ── User detail page ── */
+    .user-hero {
+      display: flex; align-items: center; gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .avatar-lg {
+      width: 64px; height: 64px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 1.5rem; flex-shrink: 0;
+    }
+    .user-meta h2 { font-size: 1.4rem; font-weight: 700; }
+    .user-meta p  { color: var(--text-muted); font-size: 0.875rem; margin-top: 0.2rem; }
+
+    .pill {
+      display: inline-block; padding: 0.2rem 0.6rem; border-radius: 99px;
+      font-size: 0.72rem; font-weight: 600; margin-right: 0.3rem;
+    }
+    .pill-blue   { background: #1a2a3e; color: #7cb9f0; }
+    .pill-green  { background: var(--ok-bg); color: var(--success); border: 1px solid var(--ok-border); }
+    .pill-purple { background: var(--accent-soft); color: var(--accent-text); }
+
+    /* ── Breadcrumb ── */
+    .breadcrumb {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem;
+    }
+    .breadcrumb a { color: var(--accent-text); text-decoration: none; cursor: pointer; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    .breadcrumb .sep { opacity: 0.4; }
+
+    /* ── Route transition selector ── */
+    .trans-bar { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .trans-btn {
+      padding: 0.3rem 0.8rem; border-radius: 7px; font-size: 0.78rem; font-weight: 600;
+      border: 1px solid var(--border); background: var(--bg); color: var(--text-muted);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .trans-btn.active { background: var(--accent-soft); color: var(--accent-text); border-color: var(--accent); }
+
+    /* ── Buttons ── */
+    button, .btn {
+      cursor: pointer; border: none; border-radius: 8px;
+      padding: 0.55rem 1.1rem; font-size: 0.875rem; font-weight: 600;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    button:active { transform: scale(0.96); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-ghost   { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
+
+    /* ── 404 ── */
+    .not-found {
+      text-align: center; padding: 4rem 2rem;
+    }
+    .not-found .code { font-size: 6rem; font-weight: 800; color: var(--border); line-height: 1; }
+    .not-found h2    { font-size: 1.5rem; margin: 0.5rem 0; }
+    .not-found p     { color: var(--text-muted); margin-bottom: 1.5rem; }
+
+    /* ── Phase roadmap ── */
+    .phase-row { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .phase-pill {
+      padding: 0.25rem 0.7rem; border-radius: 99px; font-size: 0.72rem; font-weight: 600;
+      border: 1px solid var(--border); color: var(--text-muted); background: var(--bg);
+      transition: background 0.3s, color 0.3s;
+    }
+    .phase-pill.done   { background: var(--ok-bg);      color: var(--success);     border-color: var(--ok-border); }
+    .phase-pill.active { background: var(--accent-soft); color: var(--accent-text); border-color: var(--border); }
+
+    pre {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.9rem; font-size: 0.75rem; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem;
+    }
+    .kw  { color: var(--accent-text); }
+    .str { color: #f59e0b; }
+    .cm  { color: var(--text-muted); opacity: 0.7; }
+    .fn  { color: var(--success); }
+
+    footer { padding: 2rem; color: var(--text-muted); font-size: 0.78rem; text-align: center; opacity: 0.5; }
+  </style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- ── Persistent app shell (never re-rendered) ── -->
+  <nav class="topnav" id="topnav">
+    <a class="nav-brand" href="/" data-link>CUP</a>
+    <div class="nav-links">
+      <a class="nav-link" href="/"          data-link data-route="/">Home</a>
+      <a class="nav-link" href="/dashboard" data-link data-route="/dashboard">Dashboard</a>
+      <a class="nav-link" href="/users"     data-link data-route="/users">Users</a>
+      <a class="nav-link" href="/about"     data-link data-route="/about">About</a>
+    </div>
+    <div class="nav-right">
+      <span class="nav-path" id="nav-path">/</span>
+      <button class="theme-btn" id="theme-btn">Toggle Theme</button>
+    </div>
+  </nav>
+
+  <!-- ── Route outlet — only this swaps on navigation ── -->
+  <div class="outlet" id="outlet"></div>
+</div>
+
+<script type="module">
+  import { createSignal, theme, createRouter } from '../../src/index.ts';
+
+  // ── Theme ─────────────────────────────────────────────────────────────────
+  const appTheme = theme(['theme-dark', 'theme-light'], 'theme-dark');
+  document.getElementById('theme-btn').addEventListener('click', () => appTheme.toggle());
+
+  // ── Transition mode (toggled from About page) ─────────────────────────────
+  const activeTransition = createSignal('slide');
+
+  // ── Shared data ───────────────────────────────────────────────────────────
+  const USERS = [
+    { id: '1', name: 'Alice Chen',    role: 'Engineer',  color: '#4f46e5', bg: '#1a1a30', tags: ['TypeScript','Go'],     joined: 'Jan 2023', projects: 12, commits: 847 },
+    { id: '2', name: 'Ben Okafor',    role: 'Designer',  color: '#f59e0b', bg: '#2a1f0a', tags: ['Figma','CSS'],         joined: 'Mar 2023', projects: 8,  commits: 203 },
+    { id: '3', name: 'Clara Müller',  role: 'DevOps',    color: '#10b981', bg: '#0a2a1f', tags: ['Go','Kubernetes'],      joined: 'Jun 2022', projects: 15, commits: 1204 },
+    { id: '4', name: 'David Park',    role: 'Product',   color: '#ec4899', bg: '#2a0a1f', tags: ['Roadmaps','Research'],  joined: 'Sep 2022', projects: 6,  commits: 41 },
+    { id: '5', name: 'Eva Larsson',   role: 'Engineer',  color: '#8b5cf6', bg: '#1a0a2a', tags: ['Rust','Python'],        joined: 'Nov 2023', projects: 9,  commits: 632 },
+  ];
+
+  // ── Route views ───────────────────────────────────────────────────────────
+
+  // HOME
+  const homeView = {
+    template: `
+      <div class="page-header">
+        <h1>CUP Router</h1>
+        <p>Phase 6 — SPA routing via History API. No page reloads.</p>
+      </div>
+
+      <div class="cards">
+        {% for card in cards %}
+          <div class="card">
+            <div class="clabel">{{ card.label }}</div>
+            <div class="cvalue">{{ card.value }}</div>
+            <div class="csub">{{ card.sub }}</div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="section">
+        <h2>Router API</h2>
+        <pre><span class="kw">const</span> router = <span class="fn">createRouter</span>({
+  routes: [
+    { path: <span class="str">'/'</span>,         view: homeView },
+    { path: <span class="str">'/dashboard'</span>, view: dashboardView },
+    { path: <span class="str">'/user/:id'</span>,  view: ({ id }) => <span class="fn">userView</span>(id) },
+    { path: <span class="str">'*'</span>,          view: notFoundView },
+  ],
+  transition: <span class="str">'slide'</span>,   <span class="cm">// 'fade' | 'slide' | 'none'</span>
+});
+
+<span class="kw">await</span> router.<span class="fn">start</span>(document.<span class="fn">getElementById</span>(<span class="str">'outlet'</span>));
+
+<span class="cm">// &lt;a data-link href="/dashboard"&gt; — zero page reload</span>
+<span class="cm">// router.navigate('/user/42')      — programmatic</span>
+<span class="cm">// router.current                   — Signal&lt;string&gt;</span>
+<span class="cm">// router.params                    — Signal&lt;Params&gt;</span></pre>
+      </div>
+
+      <div class="section">
+        <h2>Navigate</h2>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <a class="btn btn-primary" href="/dashboard" data-link>→ Dashboard</a>
+          <a class="btn btn-ghost"   href="/users"     data-link>→ Users</a>
+          <a class="btn btn-ghost"   href="/about"     data-link>→ About</a>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Roadmap</h2>
+        <div class="phase-row">
+          {% for phase in phases %}
+            <span class="phase-pill {% if phase.done %}done{% elif phase.active %}active{% endif %}">
+              {{ phase.label }}
+            </span>
+          {% endfor %}
+        </div>
+      </div>
+
+      <footer>CUP — History API · CSS transitions · :param routing · no page reloads</footer>
+    `,
+    state: {
+      cards: [
+        { label: 'Routes',       value: '5',      sub: 'incl. wildcard 404' },
+        { label: 'Params',       value: ':id',    sub: 'named segments' },
+        { label: 'Transitions',  value: '3',      sub: 'fade · slide · none' },
+        { label: 'Bundle delta', value: '+1.2KB', sub: 'router module' },
+      ],
+      phases: [
+        { label: 'Core Runtime',        done: true,  active: false },
+        { label: 'Reactivity Layer',    done: true,  active: false },
+        { label: 'CSS-First Model',     done: true,  active: false },
+        { label: 'Multi-Lang Adapters', done: true,  active: false },
+        { label: 'Action System',       done: true,  active: false },
+        { label: 'Routing',             done: false, active: true  },
+        { label: 'Tooling',             done: false, active: false },
+        { label: 'DevTools',            done: false, active: false },
+      ],
+    },
+  };
+
+  // DASHBOARD
+  const dashboardView = {
+    template: `
+      <div class="page-header">
+        <h1>Dashboard</h1>
+        <p>Static route — <code>/dashboard</code></p>
+      </div>
+
+      <div class="cards">
+        {% for stat in stats %}
+          <div class="card">
+            <div class="clabel">{{ stat.label }}</div>
+            <div class="cvalue">{{ stat.value }}</div>
+            <div class="csub">{{ stat.trend }}</div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="section">
+        <h2>Recent Activity</h2>
+        <ul class="user-list">
+          {% for item in activity %}
+            <li class="user-item" style="cursor:default">
+              <div class="avatar" style="background:{{ item.color }}22;color:{{ item.color }}">{{ item.icon }}</div>
+              <div>
+                <div class="user-name">{{ item.title }}</div>
+                <div class="user-role">{{ item.time }}</div>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>Quick Links</h2>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <a class="btn btn-primary" href="/users" data-link>View Users</a>
+          <a class="btn btn-ghost"   href="/"      data-link>← Home</a>
+        </div>
+      </div>
+
+      <footer>CUP Router — route: /dashboard</footer>
+    `,
+    state: {
+      stats: [
+        { label: 'Active Users',   value: '2,841', trend: '↑ 12% this week' },
+        { label: 'Requests/min',   value: '14.2K', trend: '↑ 3% vs yesterday' },
+        { label: 'Avg Latency',    value: '18ms',  trend: '↓ 2ms improved' },
+        { label: 'Error Rate',     value: '0.02%', trend: '↓ stable' },
+      ],
+      activity: [
+        { icon: '⬆', color: '#4f46e5', title: 'Deployed cup-runtime v0.6.0',    time: '2 min ago' },
+        { icon: '✓', color: '#10b981', title: 'CI passed — 48 tests green',       time: '11 min ago' },
+        { icon: '✎', color: '#f59e0b', title: 'Clara updated Kubernetes config',  time: '34 min ago' },
+        { icon: '⚠', color: '#f66',    title: 'Rate-limit spike on /api/search', time: '1 hr ago' },
+        { icon: '✓', color: '#10b981', title: 'Go adapter v0.1.0 published',      time: '3 hr ago' },
+      ],
+    },
+  };
+
+  // USERS LIST
+  const usersView = {
+    template: `
+      <div class="page-header">
+        <h1>Users</h1>
+        <p>Static route — <code>/users</code>. Click a user to navigate to <code>/user/:id</code>.</p>
+      </div>
+
+      <div class="section">
+        <h2>Team ({{ total }} members)</h2>
+        <ul class="user-list">
+          {% for user in users %}
+            <li>
+              <a class="user-item" href="/user/{{ user.id }}" data-link>
+                <div class="avatar" style="background:{{ user.bg }};color:{{ user.color }}">
+                  {{ user.initials }}
+                </div>
+                <div>
+                  <div class="user-name">{{ user.name }}</div>
+                  <div class="user-role">{{ user.role }} · joined {{ user.joined }}</div>
+                </div>
+                <span class="user-arrow">›</span>
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div style="margin-top:1rem">
+        <a class="btn btn-ghost" href="/" data-link>← Home</a>
+      </div>
+
+      <footer>CUP Router — route: /users</footer>
+    `,
+    state: {
+      total: USERS.length,
+      users: USERS.map(u => ({
+        ...u,
+        initials: u.name.split(' ').map(n => n[0]).join(''),
+      })),
+    },
+  };
+
+  // USER DETAIL (factory — receives :id param)
+  function userDetailView(id) {
+    const user = USERS.find(u => u.id === id);
+    if (!user) return notFoundView;
+    const initials = user.name.split(' ').map(n => n[0]).join('');
+    return {
+      template: `
+        <div class="breadcrumb">
+          <a href="/users" data-link>Users</a>
+          <span class="sep">/</span>
+          <span>{{ name }}</span>
+        </div>
+
+        <div class="user-hero">
+          <div class="avatar-lg" style="background:{{ bg }};color:{{ color }}">{{ initials }}</div>
+          <div class="user-meta">
+            <h2>{{ name }}</h2>
+            <p>{{ role }} · Joined {{ joined }}</p>
+            <div style="margin-top:.5rem">
+              {% for tag in tags %}
+                <span class="pill pill-purple">{{ tag }}</span>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="cards">
+          <div class="card">
+            <div class="clabel">Projects</div>
+            <div class="cvalue">{{ projects }}</div>
+            <div class="csub">active</div>
+          </div>
+          <div class="card">
+            <div class="clabel">Commits</div>
+            <div class="cvalue">{{ commits }}</div>
+            <div class="csub">all time</div>
+          </div>
+          <div class="card">
+            <div class="clabel">User ID</div>
+            <div class="cvalue" style="font-size:1.2rem">#{{ id }}</div>
+            <div class="csub">from :id param</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Route Params</h2>
+          <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:.75rem">
+            The router matched <code>/user/{{ id }}</code> against pattern <code>/user/:id</code>
+            and injected <code>{ id: "{{ id }}" }</code> into the view state automatically.
+          </p>
+        </div>
+
+        <div style="display:flex;gap:.5rem;margin-top:1rem">
+          <a class="btn btn-ghost" href="/users" data-link>← Back to Users</a>
+        </div>
+
+        <footer>CUP Router — route: /user/:id  →  params: { id: "{{ id }}" }</footer>
+      `,
+      state: { ...user, initials, id },
+    };
+  }
+
+  // ABOUT — includes transition picker
+  const aboutView = {
+    template: `
+      <div class="page-header">
+        <h1>About CUP</h1>
+        <p>CSS-Django UI Protocol — building a better frontend primitive.</p>
+      </div>
+
+      <div class="section">
+        <h2>Route Transition Style</h2>
+        <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:1rem">
+          Navigate between pages to see the effect. CSS does the animation — JS only adds/removes a class.
+        </p>
+        <div class="trans-bar" id="trans-bar">
+          <button class="trans-btn {% if trans == 'slide' %}active{% endif %}" data-action="setSlide">Slide</button>
+          <button class="trans-btn {% if trans == 'fade'  %}active{% endif %}" data-action="setFade">Fade</button>
+          <button class="trans-btn {% if trans == 'none'  %}active{% endif %}" data-action="setNone">None</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>What Was Built</h2>
+        <ul class="user-list">
+          {% for phase in phases %}
+            <li class="user-item" style="cursor:default">
+              <div class="avatar" style="background:{% if phase.done %}var(--ok-bg){% else %}var(--accent-soft){% endif %};color:{% if phase.done %}var(--success){% else %}var(--accent-text){% endif %}">
+                {% if phase.done %}✓{% else %}◉{% endif %}
+              </div>
+              <div>
+                <div class="user-name">{{ phase.label }}</div>
+                <div class="user-role">{{ phase.desc }}</div>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <footer>CUP — no virtual DOM · any backend · CSS-first</footer>
+    `,
+    state: {
+      trans: activeTransition.get(),
+      phases: [
+        { label: 'Phase 1 — Core Runtime',        done: true,  desc: 'Django template DSL, mount(), ~100 lines' },
+        { label: 'Phase 2 — Reactivity Layer',    done: true,  desc: 'createSignal, data-bind, partial DOM updates' },
+        { label: 'Phase 3 — CSS-First Model',     done: true,  desc: 'cssState, animate(), theme(), waitTransition()' },
+        { label: 'Phase 4 — Multi-Lang Adapters', done: true,  desc: 'JSON schema, Python + Go adapters, fetchView()' },
+        { label: 'Phase 5 — Action System',       done: true,  desc: 'createDispatcher, middleware, optimistic updates' },
+        { label: 'Phase 6 — Routing',             done: false, desc: 'createRouter, :params, CSS transitions — active now' },
+        { label: 'Phase 7 — Tooling',             done: false, desc: 'CLI, template validator, hot reload' },
+        { label: 'Phase 8 — DevTools',            done: false, desc: 'Inspector, binding debugger, signal graph' },
+      ],
+    },
+    actions: {
+      setSlide: () => { activeTransition.set('slide'); router.navigate('/about', { replace: true }); },
+      setFade:  () => { activeTransition.set('fade');  router.navigate('/about', { replace: true }); },
+      setNone:  () => { activeTransition.set('none');  router.navigate('/about', { replace: true }); },
+    },
+  };
+
+  // 404
+  const notFoundView = {
+    template: `
+      <div class="not-found">
+        <div class="code">404</div>
+        <h2>Page not found</h2>
+        <p>No route matched <code>{{ path }}</code></p>
+        <a class="btn btn-primary" href="/" data-link>← Go Home</a>
+      </div>
+    `,
+    state: { path: location.pathname },
+  };
+
+  // ── Router setup ──────────────────────────────────────────────────────────
+  const router = createRouter({
+    routes: [
+      { path: '/',          view: homeView,                                           title: 'CUP — Home' },
+      { path: '/dashboard', view: dashboardView,                                      title: 'CUP — Dashboard' },
+      { path: '/users',     view: usersView,                                          title: 'CUP — Users' },
+      { path: '/user/:id',  view: ({ id }) => userDetailView(id),                    title: 'CUP — User' },
+      { path: '/about',     view: () => ({ ...aboutView, state: { ...aboutView.state, trans: activeTransition.get() } }), title: 'CUP — About' },
+      { path: '*',          view: (_, __) => ({ ...notFoundView, state: { path: location.pathname } }), transition: 'fade' },
+    ],
+    transition: () => activeTransition.get(),
+  });
+
+  const syncNavigationUI = (path) => {
+    document.getElementById('nav-path').textContent = path;
+    document.querySelectorAll('.nav-link[data-route]').forEach(a => {
+      const route = a.getAttribute('data-route');
+      const isActive = path === route || (route !== '/' && path.startsWith(route));
+      a.classList.toggle('active', isActive);
+    });
+  };
+
+  async function main() {
+    await router.start(document.getElementById('outlet'));
+    router.current.subscribe(syncNavigationUI);
+    syncNavigationUI(router.current.get());
+  }
+
+  main().catch(error => {
+    console.error('[CUP Demo] startup failed', error);
+  });
+</script>
+</body>
+</html>
