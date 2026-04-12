@@ -265,13 +265,14 @@ export function createDispatcher(container: Element, view: ClientView): Dispatch
 
     try {
       await runPipeline(ctx, registration);
+      if (destroyed) return;
       // Commit: if handler mutated ctx.state, adopt those values
       if (ctx.state !== liveState) {
         liveState = { ...liveState, ...ctx.state };
       }
       remount();
     } catch (err) {
-      if (optimisticState) rollback(snapshot);
+      if (optimisticState && !destroyed) rollback(snapshot);
       throw err;
     } finally {
       running.delete(name);

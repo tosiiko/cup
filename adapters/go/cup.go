@@ -18,10 +18,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 )
 
 const adapterVersion = "cup-go/0.1.0"
+
+var (
+	scriptTagPattern     = regexp.MustCompile(`(?i)<script\b`)
+	inlineHandlerPattern = regexp.MustCompile(`(?i)\son[a-z][a-z0-9_-]*\s*=`)
+	javascriptURLPattern = regexp.MustCompile(`(?i)\b(?:href|src)\s*=\s*(['"])\s*javascript:`)
+	safeFilterPattern    = regexp.MustCompile(`\|\s*safe\b`)
+)
 
 // S is a convenience alias for map[string]any, used for state values.
 type S = map[string]any
@@ -107,6 +115,43 @@ type ValidationError struct {
 
 func (e ValidationError) Error() string {
 	return "invalid CUP protocol view: " + strings.Join(e.Issues, "; ")
+}
+
+type ActionURLPolicy string
+
+const (
+	ActionURLsAny          ActionURLPolicy = "any"
+	ActionURLsRelativeOnly ActionURLPolicy = "relative-only"
+)
+
+type ViewPolicy struct {
+	RequireVersion      bool
+	RequireTitle        bool
+	RequireRoute        bool
+	AllowSafeFilter     bool
+	AllowInlineHandlers bool
+	AllowJavaScriptURLs bool
+	AllowScriptTags     bool
+	ActionURLs          ActionURLPolicy
+}
+
+var StarterViewPolicy = ViewPolicy{
+	RequireVersion:      true,
+	RequireTitle:        true,
+	RequireRoute:        true,
+	AllowSafeFilter:     false,
+	AllowInlineHandlers: false,
+	AllowJavaScriptURLs: false,
+	AllowScriptTags:     false,
+	ActionURLs:          ActionURLsRelativeOnly,
+}
+
+type PolicyError struct {
+	Issues []string
+}
+
+func (e PolicyError) Error() string {
+	return "CUP view policy rejected: " + strings.Join(e.Issues, "; ")
 }
 
 // UIView is the CUP UI contract builder.
@@ -215,6 +260,29 @@ func Validate(input any) error {
 	return nil
 }
 
+func ValidatePolicy(input any, policy ViewPolicy) error {
+	encoded, err := json.Marshal(input)
+	if err != nil {
+		return err
+	}
+
+	var decoded any
+	if err := json.Unmarshal(encoded, &decoded); err != nil {
+		return err
+	}
+
+	if err := Validate(decoded); err != nil {
+		return err
+	}
+
+	issues := make([]string, 0)
+	validateViewPolicy(decoded, "view", policy, &issues)
+	if len(issues) > 0 {
+		return PolicyError{Issues: issues}
+	}
+	return nil
+}
+
 func validateView(input any, path string, issues *[]string) {
 	view, ok := input.(map[string]any)
 	if !ok {
@@ -258,8 +326,6 @@ func validateAction(input any, path string, issues *[]string) {
 		return
 	}
 
-	validateAllowedKeys(action, []string{"type", "url", "method", "payload", "event", "detail", "replace"}, path, issues)
-
 	actionType, ok := action["type"].(string)
 	if !ok {
 		*issues = append(*issues, fmt.Sprintf("%s.type must be a string", path))
@@ -268,6 +334,7 @@ func validateAction(input any, path string, issues *[]string) {
 
 	switch actionType {
 	case "fetch":
+		validateAllowedKeys(action, []string{"type", "url", "method", "payload"}, path, issues)
 		if _, ok := action["url"].(string); !ok {
 			*issues = append(*issues, fmt.Sprintf("%s.url must be a string", path))
 		}
@@ -286,6 +353,7 @@ func validateAction(input any, path string, issues *[]string) {
 			}
 		}
 	case "emit":
+		validateAllowedKeys(action, []string{"type", "event", "detail"}, path, issues)
 		if _, ok := action["event"].(string); !ok {
 			*issues = append(*issues, fmt.Sprintf("%s.event must be a string", path))
 		}
@@ -298,6 +366,7 @@ func validateAction(input any, path string, issues *[]string) {
 			}
 		}
 	case "navigate":
+		validateAllowedKeys(action, []string{"type", "url", "replace"}, path, issues)
 		if _, ok := action["url"].(string); !ok {
 			*issues = append(*issues, fmt.Sprintf("%s.url must be a string", path))
 		}
@@ -367,6 +436,73 @@ func validateAllowedKeys(input map[string]any, allowed []string, path string, is
 	}
 }
 
+func validateViewPolicy(input any, path string, policy ViewPolicy, issues *[]string) {
+	view, ok := input.(map[string]any)
+	if !ok {
+		return
+	}
+
+	template, _ := view["template"].(string)
+	meta, _ := view["meta"].(map[string]any)
+
+	if policy.RequireVersion {
+		if version, ok := meta["version"].(string); !ok || version != "1" {
+			*issues = append(*issues, fmt.Sprintf("%s.meta.version is required by policy", path))
+		}
+	}
+	if policy.RequireTitle {
+		if title, ok := meta["title"].(string); !ok || title == "" {
+			*issues = append(*issues, fmt.Sprintf("%s.meta.title is required by policy", path))
+		}
+	}
+	if policy.RequireRoute {
+		if route, ok := meta["route"].(string); !ok || route == "" {
+			*issues = append(*issues, fmt.Sprintf("%s.meta.route is required by policy", path))
+		}
+	}
+	if !policy.AllowSafeFilter && safeFilterPattern.MatchString(template) {
+		*issues = append(*issues, fmt.Sprintf("%s.template uses the |safe filter, which is disabled by policy", path))
+	}
+	if !policy.AllowScriptTags && scriptTagPattern.MatchString(template) {
+		*issues = append(*issues, fmt.Sprintf("%s.template contains a <script> tag, which is disabled by policy", path))
+	}
+	if !policy.AllowInlineHandlers && inlineHandlerPattern.MatchString(template) {
+		*issues = append(*issues, fmt.Sprintf("%s.template contains inline event handler attributes, which are disabled by policy", path))
+	}
+	if !policy.AllowJavaScriptURLs && javascriptURLPattern.MatchString(template) {
+		*issues = append(*issues, fmt.Sprintf("%s.template contains a javascript: URL, which is disabled by policy", path))
+	}
+
+	if policy.ActionURLs != ActionURLsRelativeOnly {
+		return
+	}
+
+	actions, ok := view["actions"].(map[string]any)
+	if !ok {
+		return
+	}
+	for actionName, raw := range actions {
+		validateActionPolicy(raw, path+".actions."+actionName, issues)
+	}
+}
+
+func validateActionPolicy(input any, path string, issues *[]string) {
+	action, ok := input.(map[string]any)
+	if !ok {
+		return
+	}
+
+	actionType, _ := action["type"].(string)
+	if actionType != "fetch" && actionType != "navigate" {
+		return
+	}
+
+	url, ok := action["url"].(string)
+	if !ok || !isRelativeURL(url) {
+		*issues = append(*issues, fmt.Sprintf("%s.url must stay relative under the current policy", path))
+	}
+}
+
 func contains(values []string, target string) bool {
 	for _, value := range values {
 		if value == target {
@@ -374,4 +510,15 @@ func contains(values []string, target string) bool {
 		}
 	}
 	return false
+}
+
+func isRelativeURL(url string) bool {
+	if strings.HasPrefix(url, "//") {
+		return false
+	}
+	return strings.HasPrefix(url, "/") ||
+		strings.HasPrefix(url, "./") ||
+		strings.HasPrefix(url, "../") ||
+		strings.HasPrefix(url, "?") ||
+		strings.HasPrefix(url, "#")
 }

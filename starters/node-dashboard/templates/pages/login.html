@@ -1,0 +1,43 @@
+<section class="starter-grid">
+  <article class="starter-card">
+    <div class="starter-kicker">Demo credentials</div>
+    <h2>Authenticate into the protected dashboard shell</h2>
+    <p>
+      The server issues a signed cookie session, validates the CSRF token, and returns the next protected protocol view.
+    </p>
+
+    <form data-form-kind="login" data-pending-label="Signing in..." class="starter-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+
+      <label class="starter-field">
+        <span>Username</span>
+        <input name="username" type="text" value="{{ demo_username }}" />
+      </label>
+
+      <label class="starter-field">
+        <span>Password</span>
+        <input name="password" type="password" value="{{ demo_password }}" />
+      </label>
+
+      <button type="submit" class="starter-button">Sign in</button>
+    </form>
+  </article>
+
+  <article class="starter-card">
+    <div class="starter-kicker">Why this starter exists</div>
+    <div class="starter-stack">
+      <div class="starter-list-item">
+        <strong>Node can own the same protocol contract</strong>
+        <p>The server validates views against the same starter policy before returning JSON.</p>
+      </div>
+      <div class="starter-list-item">
+        <strong>Protected routes stay server-authoritative</strong>
+        <p>Unauthenticated dashboard route requests are resolved back to the login view on the backend.</p>
+      </div>
+      <div class="starter-list-item">
+        <strong>The browser stays tiny</strong>
+        <p>The client only loads protocol views, submits forms, and remounts the next validated result.</p>
+      </div>
+    </div>
+  </article>
+</section>

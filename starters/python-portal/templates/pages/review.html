@@ -1,0 +1,31 @@
+<section class="starter-card">
+  <div class="starter-kicker">Pending queue</div>
+  <div class="starter-stack">
+    {% if pending_requests %}
+      {% for request in pending_requests %}
+        <div class="starter-list-item">
+          <strong>{{ request.id }} · {{ request.title }}</strong>
+          <p>{{ request.request_type }} · {{ request.requester }} · {{ request.requested_at }}</p>
+          <p>{{ request.justification }}</p>
+
+          <form data-form-kind="decide-request" data-pending-label="Recording..." class="starter-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+            <input type="hidden" name="request_id" value="{{ request.id }}" />
+
+            <label class="starter-field">
+              <span>Decision</span>
+              <input name="decision" type="text" value="approve" maxlength="8" />
+            </label>
+
+            <button type="submit" class="starter-button">Record decision</button>
+          </form>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="starter-list-item">
+        <strong>The queue is clear</strong>
+        <p>All requests have already been routed to history.</p>
+      </div>
+    {% endif %}
+  </div>
+</section>

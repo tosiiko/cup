@@ -27,6 +27,32 @@ describe('render', () => {
     expect(html).not.toContain('B');
   });
 
+  it('supports comparison operators in conditionals', () => {
+    const html = render(
+      '{% if score >= 10 %}<strong>pass</strong>{% else %}<span>fail</span>{% endif %}',
+      { score: 12 },
+    );
+
+    expect(html).toContain('<strong>pass</strong>');
+    expect(html).not.toContain('fail');
+  });
+
+  it('exposes loop metadata inside for blocks', () => {
+    const html = render(
+      '{% for item in items %}{% if loop.first %}<b>{{ loop.index1 }}. {{ item }}</b>{% elif loop.last %}<i>{{ loop.index }}. {{ item }}</i>{% endif %}{% endfor %}',
+      { items: ['A', 'B', 'C'] },
+    );
+
+    expect(html).toContain('<b>1. A</b>');
+    expect(html).toContain('<i>2. C</i>');
+    expect(html).not.toContain('B');
+  });
+
+  it('throws on unsupported tags and filters', () => {
+    expect(() => render('{% include "card.html" %}', {})).toThrow('Unsupported tag');
+    expect(() => render('{{ title|upper }}', { title: 'Hello' })).toThrow('Unsupported filter');
+  });
+
   it('throws on malformed templates', () => {
     expect(() => render('{% if ready %}<p>Hi</p>', { ready: true })).toThrow(TemplateError);
   });

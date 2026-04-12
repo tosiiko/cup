@@ -1,5 +1,6 @@
 import { render } from './parser.js';
 import { ACTION_CLEANUP, cleanupTree, trackCleanup } from './cleanup.js';
+import { recordClientMount } from './inspect.js';
 import type { ClientActionHandler, ClientView } from './types.js';
 
 /**
@@ -10,6 +11,7 @@ export function mount(container: Element, view: ClientView): void {
   cleanupTree(container);
   const html = render(view.template, view.state);
   container.innerHTML = html;
+  recordClientMount(container, view);
 
   if (view.actions) {
     bindActions(container, view.actions, view.state);

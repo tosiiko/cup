@@ -1,4 +1,5 @@
 import { mkdirSync, rmSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
@@ -22,4 +23,16 @@ await build({
   sourcemap: false,
   legalComments: 'none',
   logLevel: 'info',
+});
+
+const tscBin = resolve(
+  rootDir,
+  'node_modules',
+  '.bin',
+  process.platform === 'win32' ? 'tsc.cmd' : 'tsc',
+);
+
+execFileSync(tscBin, ['-p', resolve(rootDir, 'tsconfig.build.json')], {
+  cwd: rootDir,
+  stdio: 'inherit',
 });

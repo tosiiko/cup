@@ -1,0 +1,19 @@
+{
+  "template": "<section class=\"starter-card\"><h2>{{ title }}</h2><p>{{ summary }}</p></section>",
+  "state": {
+    "title": "Account review",
+    "summary": "Backend approved for launch."
+  },
+  "actions": {
+    "next": {
+      "type": "navigate",
+      "url": "/accounts/next",
+      "replace": true
+    }
+  },
+  "meta": {
+    "version": "1",
+    "title": "Account review",
+    "route": "/accounts/review"
+  }
+}

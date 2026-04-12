@@ -1,0 +1,45 @@
+<section class="starter-grid">
+  <article class="starter-card">
+    <div class="starter-kicker">Preference mutation</div>
+    <h2>Save a small piece of session-backed state</h2>
+    <p>
+      This form posts JSON back to Python, validates the CSRF token, updates the session,
+      and remounts the next protocol view.
+    </p>
+
+    <form data-form-kind="preferences" data-pending-label="Saving..." class="starter-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+
+      <label class="starter-field">
+        <span>Display name</span>
+        <input name="display_name" type="text" value="{{ display_name }}" maxlength="40" placeholder="Operator" />
+      </label>
+
+      <button type="submit" class="starter-button">Save preference</button>
+    </form>
+  </article>
+
+  <article class="starter-card">
+    <div class="starter-kicker">Why this starter works</div>
+    <div class="starter-stack">
+      {% for feature in features %}
+        <div class="starter-list-item">
+          <strong>{{ feature.label }}</strong>
+          <p>{{ feature.detail }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+
+<section class="starter-card">
+  <div class="starter-kicker">What to edit first</div>
+  <div class="starter-stack">
+    {% for step in steps %}
+      <div class="starter-list-item">
+        <strong>{{ step.title }}</strong>
+        <p>{{ step.detail }}</p>
+      </div>
+    {% endfor %}
+  </div>
+</section>

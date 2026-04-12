@@ -13,6 +13,7 @@ It is based on the architecture proven out in `demo/dashboard2`, but this folder
 - session and security boundaries in `app/sessions.py` and `app/security.py`
 - small view builders in `app/views/`
 - a thin browser shell in `static/app.js`
+- starter policy validation before JSON leaves the server
 
 ## Run
 
@@ -62,6 +63,9 @@ Keep these boundaries:
 - actions validate and mutate, but do not own transport details
 - routes decide which view to return
 - sessions and CSRF stay in the backend
+- policy validation rejects non-compliant views before they reach the browser
+
+This starter is also compatible with the optional reference stylesheet at `@tosiiko/cup/styles/reference.css` if you want to start from CUP's shared component vocabulary.
 
 ## Why This Starter Exists
 

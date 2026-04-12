@@ -1,31 +1,40 @@
 {
   "name": "@tosiiko/cup",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "CUP universal UI runtime for protocol-driven browser rendering",
   "type": "module",
   "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "publishConfig": {
     "access": "public"
   },
   "files": [
     "dist",
+    "docs",
     "schema",
+    "styles",
     "README.md",
     "LICENSE"
   ],
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./schema/uiview.v1.json": "./schema/uiview.v1.json"
+    "./schema/uiview.v1.json": "./schema/uiview.v1.json",
+    "./styles/reference.css": "./styles/reference.css"
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "./styles/reference.css"
+  ],
   "scripts": {
     "build": "node scripts/build.mjs",
     "check": "npm run build && npm run test",
+    "demo:smoke": "node scripts/demo-smoke.mjs",
     "demo:build": "vite build examples/demo --outDir ../../dist-demo",
     "demo:dev": "vite examples/demo",
-    "pack:check": "npm_config_cache=/tmp/cup-npm-cache npm pack --dry-run",
+    "pack:check": "npm run build && node scripts/pack-check.mjs",
+    "starter:smoke": "node scripts/starter-smoke.mjs",
     "test": "npm run test:ts && npm run test:python && npm run test:go",
     "test:go": "cd adapters/go && GOCACHE=/tmp/cup-go-cache go test ./...",
     "test:python": "python3 -m unittest discover -s adapters/python/tests -p 'test_*.py'",

@@ -1,0 +1,25 @@
+<section class="starter-card">
+  <div class="starter-kicker">File map</div>
+  <div class="starter-stack">
+    {% for file in files %}
+      <div class="starter-list-item starter-list-item--split">
+        <code>{{ file.path }}</code>
+        <p>{{ file.detail }}</p>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="starter-grid">
+  <article class="starter-card">
+    <div class="starter-kicker">Request loop</div>
+    <p>1. The browser loads `/api/views?route=...`.</p>
+    <p>2. Python resolves the route and validates the outgoing view against the starter policy.</p>
+    <p>3. The browser mounts the returned protocol view and only posts the form payload back for mutations.</p>
+  </article>
+
+  <article class="starter-card">
+    <div class="starter-kicker">Next upgrade path</div>
+    <p>Use this starter until you need role-based auth, more routes, or richer workflows, then move up to the CRM starter.</p>
+  </article>
+</section>

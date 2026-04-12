@@ -18,6 +18,7 @@ from .actions import (
     terminate_other_sessions_action,
 )
 from .config import DIST_DIR, HOST, INDEX_FILE, PORT, SESSION_ABSOLUTE_SECONDS, SESSION_COOKIE, STATIC_DIR, USE_SECURE_COOKIES
+from .cup_bridge import STARTER_VIEW_POLICY, validate_view_policy
 from .data import POST_ROUTE_FALLBACKS
 from .routes import resolve_view_for_route
 from .security import make_cookie_value, security_headers, verify_cookie_value
@@ -52,6 +53,7 @@ class CRMHandler(BaseHTTPRequestHandler):
         self.send_payload(text.encode("utf-8"), status=status, content_type=content_type)
 
     def send_view(self, view: Any, *, status: int = 200) -> None:
+        validate_view_policy(view, STARTER_VIEW_POLICY)
         body, content_type = view.to_response()
         self.send_payload(body.encode("utf-8"), status=status, content_type=content_type, is_json=True)
 

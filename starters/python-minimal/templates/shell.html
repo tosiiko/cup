@@ -1,0 +1,42 @@
+<div class="starter-shell">
+  <aside class="starter-sidebar">
+    <div class="starter-brand">
+      <div class="starter-mark">C</div>
+      <div>
+        <strong>{{ app_name }}</strong>
+        <p>Small enough to copy in one sitting.</p>
+      </div>
+    </div>
+
+    <nav class="starter-nav">
+      {% for item in nav %}
+        <a href="{{ item.href }}" data-link class="{% if item.active %}starter-link starter-link--active{% else %}starter-link{% endif %}">
+          {{ item.label }}
+        </a>
+      {% endfor %}
+    </nav>
+
+    <div class="starter-sidebar-card">
+      <div class="starter-kicker">Current operator</div>
+      <strong>{{ display_name }}</strong>
+      <p>Signed cookie session, CSRF protection, and policy-validated protocol responses.</p>
+    </div>
+  </aside>
+
+  <main class="starter-main">
+    <header class="starter-header">
+      <div class="starter-kicker">{{ title }}</div>
+      <h1>{{ heading }}</h1>
+      <p>{{ subheading }}</p>
+    </header>
+
+    {% if notice %}
+      <div class="starter-banner starter-banner--success">{{ notice }}</div>
+    {% endif %}
+    {% if error %}
+      <div class="starter-banner starter-banner--error">{{ error }}</div>
+    {% endif %}
+
+    <!-- PAGE_CONTENT -->
+  </main>
+</div>

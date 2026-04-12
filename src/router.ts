@@ -56,6 +56,19 @@ export interface RouterOptions {
   transition?: TransitionSource;
   /** Prefix prepended to all paths (for sub-directory deployments) */
   base?: string;
+  /** Lifecycle hook called before each navigation render */
+  onNavigateStart?: (context: NavigationContext) => void;
+  /** Lifecycle hook called after each successful navigation render */
+  onNavigateEnd?: (context: NavigationContext) => void;
+  /** Lifecycle hook called when a navigation render fails */
+  onNavigateError?: (error: Error, context: NavigationContext) => void;
+}
+
+export interface NavigationContext {
+  pathname: string;
+  params: Params;
+  query: URLSearchParams;
+  source: 'start' | 'navigate' | 'popstate';
 }
 
 export interface Router {
@@ -173,7 +186,14 @@ async function runTransition(
 // ── createRouter ──────────────────────────────────────────────────────────────
 
 export function createRouter(options: RouterOptions): Router {
-  const { routes, transition: defaultTransition = 'fade', base = '' } = options;
+  const {
+    routes,
+    transition: defaultTransition = 'fade',
+    base = '',
+    onNavigateStart,
+    onNavigateEnd,
+    onNavigateError,
+  } = options;
 
   const compiled = routes.map((r) => compileRoute(r));
   const normalizedBase = normalizeBase(base);
@@ -207,45 +227,61 @@ export function createRouter(options: RouterOptions): Router {
 
   // ── Resolve and render a matched route ────────────────────────────────────
 
-  async function renderMatch(pathname: string, search: string): Promise<void> {
+  async function renderMatch(pathname: string, search: string, source: NavigationContext['source']): Promise<void> {
     const match = matchRoute(compiled, pathname);
     if (!match) return; // no wildcard defined — do nothing
 
     const { route, params: routeParams } = match;
     const def = route.definition;
     const qs  = new URLSearchParams(search);
+    const context: NavigationContext = {
+      pathname,
+      params: routeParams,
+      query: qs,
+      source,
+    };
 
-    // Resolve view (factory or plain UIView)
-    const view = typeof def.view === 'function'
-      ? await def.view(routeParams, qs)
-      : def.view;
+    try {
+      onNavigateStart?.(context);
 
-    // Update signals
-    current.set(pathname);
-    params.set(routeParams);
-    query.set(qs);
+      // Resolve view (factory or plain UIView)
+      const view = typeof def.view === 'function'
+        ? await def.view(routeParams, qs)
+        : def.view;
 
-    if (def.title) document.title = def.title;
+      // Update signals
+      current.set(pathname);
+      params.set(routeParams);
+      query.set(qs);
 
-    const targetOutlet = outlet;
-    if (!targetOutlet) return;
+      if (def.title) document.title = def.title;
 
-    const style = resolveTransition(def.transition ?? defaultTransition);
-    transitioning.set(true);
+      const targetOutlet = outlet;
+      if (!targetOutlet) return;
 
-    await runTransition(targetOutlet, style, () => {
-      mount(targetOutlet, view);
-    });
+      const style = resolveTransition(def.transition ?? defaultTransition);
+      transitioning.set(true);
 
-    transitioning.set(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+      await runTransition(targetOutlet, style, () => {
+        mount(targetOutlet, view);
+      });
+
+      transitioning.set(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      onNavigateEnd?.(context);
+    } catch (error) {
+      transitioning.set(false);
+      const normalized = error instanceof Error ? error : new Error(String(error));
+      onNavigateError?.(normalized, context);
+      throw normalized;
+    }
   }
 
   // ── Global popstate ───────────────────────────────────────────────────────
 
   function onPopState(): void {
     activeTransition = activeTransition.then(() =>
-      renderMatch(stripBase(location.pathname, normalizedBase), location.search)
+      renderMatch(stripBase(location.pathname, normalizedBase), location.search, 'popstate')
     );
   }
 
@@ -263,7 +299,7 @@ export function createRouter(options: RouterOptions): Router {
       outlet = el;
       window.addEventListener('popstate', onPopState);
       document.addEventListener('click', onDocumentClick);
-      await renderMatch(stripBase(location.pathname, normalizedBase), location.search);
+      await renderMatch(stripBase(location.pathname, normalizedBase), location.search, 'start');
     },
 
     async navigate(path, { replace = false, state = null } = {}): Promise<void> {
@@ -274,7 +310,7 @@ export function createRouter(options: RouterOptions): Router {
         history.pushState(state, '', targetPath);
       }
       activeTransition = activeTransition.then(() =>
-        renderMatch(stripBase(location.pathname, normalizedBase), location.search)
+        renderMatch(stripBase(location.pathname, normalizedBase), location.search, 'navigate')
       );
       return activeTransition;
     },

@@ -9,7 +9,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "adapters" / "python"))
 
-from cup import EmitAction, UIView  # noqa: E402
+from cup import EmitAction, STARTER_VIEW_POLICY, UIView, validate_view_policy  # noqa: E402
 
 HOST = "127.0.0.1"
 PORT = 8010
@@ -147,6 +147,7 @@ class DemoHandler(BaseHTTPRequestHandler):
         self.wfile.write(encoded)
 
     def _send_json(self, view: UIView, *, status: int = 200) -> None:
+        validate_view_policy(view, STARTER_VIEW_POLICY)
         body, content_type = view.to_response()
         self._send_text(body, content_type=content_type, status=status)
 

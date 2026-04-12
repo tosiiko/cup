@@ -1,0 +1,9 @@
+<section class="starter-grid">
+  {% for metric in metrics %}
+    <article class="starter-card">
+      <div class="starter-kicker">{{ metric.label }}</div>
+      <h2>{{ metric.value }}</h2>
+      <p>These values come from the authenticated server session and dashboard state.</p>
+    </article>
+  {% endfor %}
+</section>

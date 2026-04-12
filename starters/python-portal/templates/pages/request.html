@@ -1,0 +1,58 @@
+<section class="starter-grid">
+  <article class="starter-card">
+    <div class="starter-kicker">New workflow request</div>
+    <h2>Capture the next server-routed task</h2>
+    <p>
+      This form is intentionally plain: the browser only sends the payload and CSRF token,
+      then the backend decides what the next view should be.
+    </p>
+
+    <form data-form-kind="submit-request" data-pending-label="Submitting..." class="starter-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+
+      <label class="starter-field">
+        <span>Draft request id</span>
+        <input name="draft_request_id" type="text" value="{{ draft_request_id }}" disabled />
+      </label>
+
+      <label class="starter-field">
+        <span>Request title</span>
+        <input name="request_title" type="text" maxlength="80" placeholder="Partner onboarding approval" />
+      </label>
+
+      <label class="starter-field">
+        <span>Request type</span>
+        <input name="request_type" type="text" maxlength="40" placeholder="Approval" />
+      </label>
+
+      <label class="starter-field">
+        <span>Justification</span>
+        <input name="justification" type="text" maxlength="160" placeholder="Explain why this request should enter the review queue." />
+      </label>
+
+      <button type="submit" class="starter-button">Submit request</button>
+    </form>
+  </article>
+
+  <article class="starter-card">
+    <div class="starter-kicker">Why portal flows fit CUP</div>
+    <div class="starter-stack">
+      {% for item in highlights %}
+        <div class="starter-list-item">
+          <strong>{{ item.label }}</strong>
+          <p>{{ item.detail }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+
+<section class="starter-grid">
+  {% for metric in metrics %}
+    <article class="starter-card">
+      <div class="starter-kicker">{{ metric.label }}</div>
+      <h2>{{ metric.value }}</h2>
+      <p>The numbers update from the backend-owned workflow state rather than a browser-local cache.</p>
+    </article>
+  {% endfor %}
+</section>

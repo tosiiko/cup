@@ -25,6 +25,8 @@ jobs:
 
       - run: npm install
       - run: npm run check
+      - run: npm run demo:smoke
+      - run: npm run starter:smoke
       - run: npm run pack:check
       - run: python3 -m pip install build
       - run: python3 -m build

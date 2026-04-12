@@ -1,0 +1,25 @@
+<section class="starter-card">
+  <div class="starter-kicker">Active alert queue</div>
+  <div class="starter-stack">
+    {% if alerts %}
+      {% for alert in alerts %}
+        <div class="starter-list-item">
+          <strong>{{ alert.title }}</strong>
+          <p>{{ alert.detail }}</p>
+          <p>Severity: {{ alert.severity }}</p>
+
+          <form data-form-kind="dismiss-alert" data-pending-label="Dismissing..." class="starter-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+            <input type="hidden" name="alert_id" value="{{ alert.id }}" />
+            <button type="submit" class="starter-button">Dismiss alert</button>
+          </form>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="starter-list-item">
+        <strong>No active alerts remain</strong>
+        <p>The server-backed alert queue is empty.</p>
+      </div>
+    {% endif %}
+  </div>
+</section>

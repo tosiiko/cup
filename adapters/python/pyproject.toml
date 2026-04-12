@@ -15,5 +15,8 @@ classifiers = [
   "Operating System :: OS Independent",
 ]
 
+[project.scripts]
+cup-python = "cup_codegen:main"
+
 [tool.setuptools]
-py-modules = ["cup"]
+py-modules = ["cup", "cup_codegen"]

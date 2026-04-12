@@ -1,0 +1,22 @@
+<section class="starter-card">
+  <div class="starter-kicker">Workflow history</div>
+  <div class="starter-stack">
+    {% if history_items %}
+      {% for item in history_items %}
+        <div class="starter-list-item">
+          <strong>{{ item.id }} · {{ item.status }}</strong>
+          <p>{{ item.title }}</p>
+          <p>{{ item.requester }} · {{ item.requested_at }}</p>
+          {% if item.decision %}
+            <p>{{ item.decision }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="starter-list-item">
+        <strong>No completed workflow yet</strong>
+        <p>Once a request is approved or declined, it will appear here.</p>
+      </div>
+    {% endif %}
+  </div>
+</section>

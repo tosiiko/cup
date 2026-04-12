@@ -4,14 +4,20 @@ import type {
   FetchActionDescriptor,
   JSONValue,
   NavigateActionDescriptor,
+  PatchMode,
+  ProtocolPatch,
   ProtocolView,
   ViewMeta,
 } from './protocol.js';
 
-const ACTION_KEYS = new Set(['type', 'url', 'method', 'payload', 'event', 'detail', 'replace']);
+const FETCH_ACTION_KEYS = new Set(['type', 'url', 'method', 'payload']);
+const EMIT_ACTION_KEYS = new Set(['type', 'event', 'detail']);
+const NAVIGATE_ACTION_KEYS = new Set(['type', 'url', 'replace']);
 const META_KEYS = new Set(['version', 'lang', 'generator', 'title', 'route']);
 const VIEW_KEYS = new Set(['template', 'state', 'actions', 'meta']);
+const PATCH_KEYS = new Set(['kind', 'mode', 'template', 'state', 'actions', 'meta']);
 const METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
+const PATCH_MODES = new Set(['merge', 'replace']);
 
 export class ValidationError extends Error {
   readonly issues: string[];
@@ -30,6 +36,15 @@ export function validateProtocolView(input: unknown): ProtocolView {
     throw new ValidationError(issues);
   }
   return input as ProtocolView;
+}
+
+export function validateProtocolPatch(input: unknown): ProtocolPatch {
+  const issues: string[] = [];
+  validatePatch(input, 'patch', issues);
+  if (issues.length > 0) {
+    throw new ValidationError(issues);
+  }
+  return input as ProtocolPatch;
 }
 
 function validateView(input: unknown, path: string, issues: string[]): void {
@@ -65,13 +80,65 @@ function validateView(input: unknown, path: string, issues: string[]): void {
   }
 }
 
-function validateActionDescriptor(input: unknown, path: string, issues: string[]): void {
+function validatePatch(input: unknown, path: string, issues: string[]): void {
   if (!isPlainObject(input)) {
     issues.push(`${path} must be an object`);
     return;
   }
 
-  validateNoExtraKeys(input, ACTION_KEYS, path, issues);
+  validateNoExtraKeys(input, PATCH_KEYS, path, issues);
+
+  if (input.kind !== 'patch') {
+    issues.push(`${path}.kind must be "patch"`);
+  }
+
+  if (input.mode !== undefined) {
+    if (typeof input.mode !== 'string' || !PATCH_MODES.has(input.mode as PatchMode)) {
+      issues.push(`${path}.mode must be one of merge, replace`);
+    }
+  }
+
+  if (input.template !== undefined && typeof input.template !== 'string') {
+    issues.push(`${path}.template must be a string`);
+  }
+
+  if (input.state !== undefined) {
+    if (!isPlainObject(input.state)) {
+      issues.push(`${path}.state must be an object`);
+    } else {
+      validateJSONObject(input.state, `${path}.state`, issues);
+    }
+  }
+
+  if (input.actions !== undefined) {
+    if (!isPlainObject(input.actions)) {
+      issues.push(`${path}.actions must be an object`);
+    } else {
+      for (const [actionName, descriptor] of Object.entries(input.actions)) {
+        validateActionDescriptor(descriptor, `${path}.actions.${actionName}`, issues);
+      }
+    }
+  }
+
+  if (input.meta !== undefined) {
+    validateMeta(input.meta, `${path}.meta`, issues);
+  }
+
+  if (
+    input.template === undefined &&
+    input.state === undefined &&
+    input.actions === undefined &&
+    input.meta === undefined
+  ) {
+    issues.push(`${path} must include at least one patch field`);
+  }
+}
+
+function validateActionDescriptor(input: unknown, path: string, issues: string[]): void {
+  if (!isPlainObject(input)) {
+    issues.push(`${path} must be an object`);
+    return;
+  }
 
   switch (input.type) {
     case 'fetch':
@@ -89,6 +156,7 @@ function validateActionDescriptor(input: unknown, path: string, issues: string[]
 }
 
 function validateFetchAction(input: Partial<FetchActionDescriptor>, path: string, issues: string[]): void {
+  validateNoExtraKeys(input as Record<string, unknown>, FETCH_ACTION_KEYS, path, issues);
   if (typeof input.url !== 'string') {
     issues.push(`${path}.url must be a string`);
   }
@@ -105,6 +173,7 @@ function validateFetchAction(input: Partial<FetchActionDescriptor>, path: string
 }
 
 function validateEmitAction(input: Partial<EmitActionDescriptor>, path: string, issues: string[]): void {
+  validateNoExtraKeys(input as Record<string, unknown>, EMIT_ACTION_KEYS, path, issues);
   if (typeof input.event !== 'string') {
     issues.push(`${path}.event must be a string`);
   }
@@ -118,6 +187,7 @@ function validateEmitAction(input: Partial<EmitActionDescriptor>, path: string, 
 }
 
 function validateNavigateAction(input: Partial<NavigateActionDescriptor>, path: string, issues: string[]): void {
+  validateNoExtraKeys(input as Record<string, unknown>, NAVIGATE_ACTION_KEYS, path, issues);
   if (typeof input.url !== 'string') {
     issues.push(`${path}.url must be a string`);
   }
@@ -194,4 +264,4 @@ function isPlainObject(input: unknown): input is Record<string, unknown> {
   return typeof input === 'object' && input !== null && !Array.isArray(input);
 }
 
-export type { ActionDescriptor, JSONValue, ProtocolView };
+export type { ActionDescriptor, JSONValue, PatchMode, ProtocolPatch, ProtocolView };

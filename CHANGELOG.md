@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+## 0.1.4
+
+- Restored published TypeScript declaration files and `types` exports for the runtime package.
+- Hardened the runtime around remote action errors, destroy-path cleanup, and request-shaping behavior.
+- Tightened TypeScript, Python, and Go action validation so each action type rejects unsupported cross-type fields.
+- Expanded contract tests so Python and Go adapter fixtures verify metadata and runtime navigation behavior end-to-end.
+- Added stronger release smoke coverage for the login demo and packed npm artifact verification.
+- Added a local inspector API, starter-safe view policy helpers, and optional reference CSS for Phase 1 adoption work.
+- Added starter and adapter documentation for policy validation, reference styling, AI generation guidance, and pre-1.0 migration notes.
+- Added Python and Go scaffold generators for new pages and actions, with starter-safe file output plus paste-ready wiring snippets.
+- Added a new `python-minimal` starter plus a starter smoke test covering route load, policy validation, CSRF, and mutation remounting.
+- Added patch validation, patch application, streaming remote mounts, offline draft/retry helpers, and repair helpers to the TypeScript runtime.
+- Added new `python-portal` and `node-dashboard` starters and expanded starter smoke coverage across all official starter shapes.
+- Added Node contract coverage plus Phase 1 docs for architecture, routing, security, testing, compatibility, and AI prompt/eval fixtures.
+
 ## 0.1.3
 
 - Removed published TypeScript declaration files from the npm package.

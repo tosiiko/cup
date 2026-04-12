@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { mountRemoteView, validateProtocolView } from '../../src/index.js';
 
@@ -27,13 +27,35 @@ function loadGoView(): unknown {
   return JSON.parse(output);
 }
 
+function loadNodeView(): unknown {
+  const output = execFileSync('node', ['tests/fixtures/node_emit.mjs'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
+  return JSON.parse(output);
+}
+
 describe('cross-language protocol contracts', () => {
+  beforeEach(() => {
+    history.replaceState(null, '', '/fixture');
+  });
+
   it('accepts Python adapter output', () => {
     const view = validateProtocolView(loadPythonView());
     const container = document.createElement('div');
 
     mountRemoteView(view, container);
     expect(container.textContent).toContain('Hello from Python');
+    expect(view.meta).toEqual({
+      version: '1',
+      lang: 'python',
+      generator: 'cup-python/0.1.0',
+      title: 'Fixture',
+      route: '/fixture',
+    });
+
+    container.querySelector('button')?.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
+    expect(location.pathname).toBe('/next');
   });
 
   it('accepts Go adapter output', () => {
@@ -42,5 +64,33 @@ describe('cross-language protocol contracts', () => {
 
     mountRemoteView(view, container);
     expect(container.textContent).toContain('Hello from Go');
+    expect(view.meta).toEqual({
+      version: '1',
+      lang: 'go',
+      generator: 'cup-go/0.1.0',
+      title: 'Fixture',
+      route: '/fixture',
+    });
+
+    container.querySelector('button')?.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
+    expect(location.pathname).toBe('/next');
+  });
+
+  it('accepts Node-emitted protocol output', () => {
+    const view = validateProtocolView(loadNodeView());
+    const container = document.createElement('div');
+
+    mountRemoteView(view, container);
+    expect(container.textContent).toContain('Hello from Node');
+    expect(view.meta).toEqual({
+      version: '1',
+      lang: 'node',
+      generator: 'cup-node-fixture/0.1.0',
+      title: 'Fixture',
+      route: '/fixture',
+    });
+
+    container.querySelector('button')?.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
+    expect(location.pathname).toBe('/next');
   });
 });

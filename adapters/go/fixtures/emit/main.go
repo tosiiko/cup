@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	view := cup.New(`<div>{{ title }}</div>`).
+	view := cup.New(`<div>{{ title }}</div><button data-action="next">Next</button>`).
 		State(cup.S{
 			"title": "Hello from Go",
 			"items": []string{"Alpha", "Beta"},

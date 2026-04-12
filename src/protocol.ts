@@ -46,4 +46,15 @@ export interface ProtocolView {
   meta?: ViewMeta;
 }
 
+export type PatchMode = 'merge' | 'replace';
+
+export interface ProtocolPatch {
+  kind: 'patch';
+  mode?: PatchMode;
+  template?: string;
+  state?: Record<string, JSONValue>;
+  actions?: Record<string, ActionDescriptor>;
+  meta?: ViewMeta;
+}
+
 export type UIView = ProtocolView;

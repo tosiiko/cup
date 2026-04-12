@@ -8,7 +8,7 @@ sys.path.insert(0, str(ROOT / "adapters" / "python"))
 from cup import NavigateAction, UIView  # noqa: E402
 
 view = (
-    UIView("<div>{{ title }}</div>")
+    UIView("<div>{{ title }}</div><button data-action=\"next\">Next</button>")
     .state(title="Hello from Python", items=["Alpha", "Beta"])
     .action("next", NavigateAction("/next"))
     .title("Fixture")

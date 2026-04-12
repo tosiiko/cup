@@ -1,0 +1,18 @@
+{
+  "template": "<a href=\"javascript:alert(1)\" onclick=\"hack()\">{{ body|safe }}</a><script>alert(1)</script>",
+  "state": {
+    "body": "<strong>unsafe</strong>",
+    "count": null
+  },
+  "actions": {
+    "save": {
+      "type": "fetch",
+      "url": "https://example.com/save",
+      "method": "TRACE",
+      "replace": true
+    }
+  },
+  "meta": {
+    "lang": "ai"
+  }
+}

@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
 ADAPTER_VERSION = "cup-python/0.1.0"
 SUPPORTED_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
+SCRIPT_TAG_PATTERN = re.compile(r"<script\b", re.IGNORECASE)
+INLINE_HANDLER_PATTERN = re.compile(r"\son[a-z][a-z0-9_-]*\s*=", re.IGNORECASE)
+JAVASCRIPT_URL_PATTERN = re.compile(r"\b(?:href|src)\s*=\s*(['\"])\s*javascript:", re.IGNORECASE)
+SAFE_FILTER_PATTERN = re.compile(r"\|\s*safe\b")
+RELATIVE_URL_PATTERN = re.compile(r"^(\/(?!\/)|\.{1,2}\/|[?#])")
 
 
 # ── Action descriptors ────────────────────────────────────────────────────────
@@ -56,6 +62,36 @@ class ValidationError(ValueError):
     def __init__(self, issues: list[str]) -> None:
         self.issues = issues
         super().__init__("invalid CUP protocol view: " + "; ".join(issues))
+
+
+@dataclass(frozen=True)
+class ViewPolicy:
+    require_version: bool = False
+    require_title: bool = False
+    require_route: bool = False
+    allow_safe_filter: bool = True
+    allow_inline_handlers: bool = True
+    allow_javascript_urls: bool = True
+    allow_script_tags: bool = True
+    action_urls: Literal["relative-only", "any"] = "any"
+
+
+STARTER_VIEW_POLICY = ViewPolicy(
+    require_version=True,
+    require_title=True,
+    require_route=True,
+    allow_safe_filter=False,
+    allow_inline_handlers=False,
+    allow_javascript_urls=False,
+    allow_script_tags=False,
+    action_urls="relative-only",
+)
+
+
+class PolicyError(ValueError):
+    def __init__(self, issues: list[str]) -> None:
+        self.issues = issues
+        super().__init__("CUP view policy rejected: " + "; ".join(issues))
 
 
 # ── UIView builder ────────────────────────────────────────────────────────────
@@ -176,6 +212,16 @@ def validate_view(view: UIView | dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
+def validate_view_policy(view: UIView | dict[str, Any], policy: ViewPolicy | None = None) -> dict[str, Any]:
+    payload = validate_view(view)
+    effective = policy or ViewPolicy()
+    issues: list[str] = []
+    _validate_policy_payload(payload, "view", effective, issues)
+    if issues:
+        raise PolicyError(issues)
+    return payload
+
+
 def _normalise(value: Any) -> Any:
     try:
         return json.loads(json.dumps(value))
@@ -217,10 +263,9 @@ def _validate_action(value: Any, path: str, issues: list[str]) -> None:
         issues.append(f"{path} must be an object")
         return
 
-    _validate_allowed_keys(value, {"type", "url", "method", "payload", "event", "detail", "replace"}, path, issues)
-
     kind = value.get("type")
     if kind == "fetch":
+        _validate_allowed_keys(value, {"type", "url", "method", "payload"}, path, issues)
         if not isinstance(value.get("url"), str):
             issues.append(f"{path}.url must be a string")
         method = value.get("method")
@@ -235,6 +280,7 @@ def _validate_action(value: Any, path: str, issues: list[str]) -> None:
         return
 
     if kind == "emit":
+        _validate_allowed_keys(value, {"type", "event", "detail"}, path, issues)
         if not isinstance(value.get("event"), str):
             issues.append(f"{path}.event must be a string")
         detail = value.get("detail")
@@ -246,6 +292,7 @@ def _validate_action(value: Any, path: str, issues: list[str]) -> None:
         return
 
     if kind == "navigate":
+        _validate_allowed_keys(value, {"type", "url", "replace"}, path, issues)
         if not isinstance(value.get("url"), str):
             issues.append(f"{path}.url must be a string")
         replace = value.get("replace")
@@ -294,3 +341,38 @@ def _validate_allowed_keys(value: dict[str, Any], allowed: set[str], path: str, 
     for key in value:
         if key not in allowed:
             issues.append(f"{path} contains unsupported property '{key}'")
+
+
+def _validate_policy_payload(value: dict[str, Any], path: str, policy: ViewPolicy, issues: list[str]) -> None:
+    meta = value.get("meta") if isinstance(value.get("meta"), dict) else {}
+    template = value.get("template", "")
+    actions = value.get("actions") if isinstance(value.get("actions"), dict) else {}
+
+    if policy.require_version and meta.get("version") != "1":
+        issues.append(f"{path}.meta.version is required by policy")
+    if policy.require_title and not meta.get("title"):
+        issues.append(f"{path}.meta.title is required by policy")
+    if policy.require_route and not meta.get("route"):
+        issues.append(f"{path}.meta.route is required by policy")
+    if not policy.allow_safe_filter and isinstance(template, str) and SAFE_FILTER_PATTERN.search(template):
+        issues.append(f"{path}.template uses the |safe filter, which is disabled by policy")
+    if not policy.allow_script_tags and isinstance(template, str) and SCRIPT_TAG_PATTERN.search(template):
+        issues.append(f"{path}.template contains a <script> tag, which is disabled by policy")
+    if not policy.allow_inline_handlers and isinstance(template, str) and INLINE_HANDLER_PATTERN.search(template):
+        issues.append(f"{path}.template contains inline event handler attributes, which are disabled by policy")
+    if not policy.allow_javascript_urls and isinstance(template, str) and JAVASCRIPT_URL_PATTERN.search(template):
+        issues.append(f"{path}.template contains a javascript: URL, which is disabled by policy")
+
+    if policy.action_urls == "relative-only":
+        for name, descriptor in actions.items():
+            _validate_policy_action(descriptor, f"{path}.actions.{name}", issues)
+
+
+def _validate_policy_action(value: Any, path: str, issues: list[str]) -> None:
+    if not isinstance(value, dict):
+        return
+    if value.get("type") not in {"fetch", "navigate"}:
+        return
+    url = value.get("url")
+    if not isinstance(url, str) or not RELATIVE_URL_PATTERN.match(url):
+        issues.append(f"{path}.url must stay relative under the current policy")

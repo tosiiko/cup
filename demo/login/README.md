@@ -21,7 +21,7 @@ npm run build
 Then start the demo:
 
 ```bash
-python3 demo/server.py
+python3 demo/login/server.py
 ```
 
 Open [http://localhost:8010](http://localhost:8010).
