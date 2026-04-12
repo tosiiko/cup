@@ -1,0 +1,18 @@
+{
+  "namespace": "rs-cup",
+  "language": "Rust",
+  "code": "rs",
+  "ecosystem": "crates.io",
+  "repo_path": "adapters/rust",
+  "intent": "official",
+  "repository_state": "implemented",
+  "implementation_kind": "source",
+  "maturity": "alpha",
+  "publication_status": "not-published",
+  "protocol_versions": [
+    "1"
+  ],
+  "depends_on_core_package": false,
+  "adapter_version": "0.1.6",
+  "generated_from": "adapters/namespaces.json"
+}

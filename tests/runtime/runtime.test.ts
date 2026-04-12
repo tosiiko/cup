@@ -227,6 +227,13 @@ describe('runtime integration', () => {
     expect(onError).toHaveBeenCalledTimes(1);
   });
 
+  it('requires an explicit fetchImpl for remote loading helpers', async () => {
+    const container = document.createElement('div');
+
+    await expect(fetchView('/view', container)).rejects.toThrow(/requires options\.fetchImpl/);
+    await expect(fetchViewStream('/stream', container)).rejects.toThrow(/requires options\.fetchImpl/);
+  });
+
   it('uses query parameters for GET remote actions', async () => {
     const container = document.createElement('div');
     document.body.append(container);

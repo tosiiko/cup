@@ -1,16 +1,15 @@
-const view = {
+import { defineNodeView, nodeNavigate } from '../../adapters/node/index.mjs';
+
+const view = defineNodeView({
   template: '<button data-action="next">Hello from Node</button>',
   state: {},
   actions: {
-    next: { type: 'navigate', url: '/next', replace: true },
+    next: nodeNavigate('/next', { replace: true }),
   },
   meta: {
-    version: '1',
-    lang: 'node',
-    generator: 'cup-node-fixture/0.1.0',
     title: 'Fixture',
     route: '/fixture',
   },
-};
+});
 
 process.stdout.write(JSON.stringify(view));

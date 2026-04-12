@@ -1,0 +1,13 @@
+{
+  "name": "ts-cup",
+  "version": "0.1.6",
+  "type": "module",
+  "private": true,
+  "description": "CUP TypeScript adapter alpha wrapper",
+  "dependencies": {
+    "@tosiiko/cup": "^0.1.6"
+  },
+  "exports": {
+    ".": "./index.ts"
+  }
+}

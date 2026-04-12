@@ -1,4 +1,21 @@
-:root {
+/*
+ * CUP Reference Theme
+ *
+ * This stylesheet is optional. It is a reference visual layer for CUP apps,
+ * not part of the wire protocol contract.
+ *
+ * Layer order in this file:
+ * 1. theme tokens
+ * 2. layouts
+ * 3. primitives
+ * 4. semantic components
+ * 5. responsive adjustments
+ *
+ * Apps may override the variables below or replace this stylesheet entirely.
+ */
+
+:root,
+.cup-theme-reference {
   color-scheme: light;
   --cup-font-sans: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
   --cup-font-mono: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
@@ -29,6 +46,8 @@
   --cup-space-5: 1.75rem;
   --cup-space-6: 2.5rem;
 }
+
+/* Layouts */
 
 .cup-app {
   min-height: 100vh;
@@ -79,6 +98,8 @@
   display: grid;
   gap: var(--cup-space-3);
 }
+
+/* Primitives */
 
 .cup-card,
 .cup-dialog,
@@ -241,6 +262,8 @@
   color: var(--cup-color-danger);
 }
 
+/* Semantic components */
+
 .cup-table {
   width: 100%;
   border-collapse: collapse;
@@ -300,6 +323,8 @@
   font-family: var(--cup-font-mono);
   font-size: 0.9em;
 }
+
+/* Responsive adjustments */
 
 @media (max-width: 920px) {
   .cup-shell {

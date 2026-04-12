@@ -2,20 +2,25 @@
 
 Go adapter for the CUP protocol.
 
-## Features
+Use it when `net/http` should own route resolution, state assembly, and protected mutations while the browser remains a thin CUP client.
 
-- Fluent `UIView` builder
-- `Validate()` helper for protocol safety
+## What It Includes
+
+- fluent `UIView` builder
+- `Fetch`, `Emit`, and `Navigate` action helpers
+- `Validate()` for protocol safety
 - `ValidatePolicy(..., cup.StarterViewPolicy)` for starter-safe server checks
-- `go run ./cmd/cupgen scaffold ...` for view/template scaffolds and wiring snippets
 - `WriteJSON()` for `net/http`
+- `go run ./cmd/cupgen scaffold ...` for starter-oriented scaffolding
 
-## Example
+## Quick Example
 
 ```go
-view := cup.New(`<h1>{{ title }}</h1>`).
-    State(cup.S{"title": "Hello"}).
-    Title("Home")
+view := cup.New(`<h1>{{ title }}</h1><button data-action="refresh">Refresh</button>`).
+    State(cup.S{"title": "Accounts"}).
+    Action("refresh", cup.Fetch("/api/accounts", cup.WithMethod("GET"))).
+    Title("Accounts").
+    Route("/accounts")
 
 if err := view.Validate(); err != nil {
     log.Fatal(err)
@@ -26,6 +31,20 @@ if err := cup.ValidatePolicy(view.ToMap(), cup.StarterViewPolicy); err != nil {
 }
 ```
 
+## Why Use The Policy Check
+
+`Validate()` confirms the protocol shape.
+
+`ValidatePolicy(..., cup.StarterViewPolicy)` adds starter-safe checks such as:
+
+- requiring `meta.version`
+- requiring `meta.title`
+- requiring `meta.route`
+- rejecting `|safe`
+- rejecting inline handlers
+- rejecting `javascript:` URLs
+- keeping action URLs relative
+
 ## Generator
 
 ```bash
@@ -34,3 +53,9 @@ go run ./cmd/cupgen scaffold action "sync accounts" --endpoint /api/accounts/syn
 ```
 
 The Go generator writes real `internal/views/` and `templates/` files where appropriate, plus `.cup/snippets/` files for route and action registration in your own `net/http` server.
+
+## Reference Material
+
+- protocol/runtime overview: [`../../README.md`](../../README.md)
+- generator docs: [`../../docs/generators.md`](../../docs/generators.md)
+- Node backend path clarification: [`../../docs/node.md`](../../docs/node.md)

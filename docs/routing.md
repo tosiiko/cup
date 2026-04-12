@@ -51,6 +51,8 @@ Use streaming when:
 - a queue/table loads in chunks
 - a workflow produces multiple server-side phases before settling
 
+When using `fetchViewStream()` or `fetchView()`, inject the transport from your app through `fetchImpl` rather than relying on an implicit global network client.
+
 Keep these guardrails:
 
 - validate every chunk or patch

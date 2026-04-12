@@ -1,0 +1,18 @@
+{
+  "namespace": "clj-cup",
+  "language": "Clojure",
+  "code": "clj",
+  "ecosystem": "clojars",
+  "repo_path": "adapters/clojure",
+  "intent": "official",
+  "repository_state": "bootstrapped",
+  "implementation_kind": "scaffold",
+  "maturity": "scaffold",
+  "publication_status": "not-published",
+  "protocol_versions": [
+    "1"
+  ],
+  "depends_on_core_package": false,
+  "adapter_version": "0.1.6",
+  "generated_from": "adapters/namespaces.json"
+}

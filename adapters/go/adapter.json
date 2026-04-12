@@ -1,0 +1,18 @@
+{
+  "namespace": "go-cup",
+  "language": "Go",
+  "code": "go",
+  "ecosystem": "go-module",
+  "repo_path": "adapters/go",
+  "intent": "official",
+  "repository_state": "implemented",
+  "implementation_kind": "production",
+  "maturity": "stable",
+  "publication_status": "not-published",
+  "protocol_versions": [
+    "1"
+  ],
+  "depends_on_core_package": false,
+  "adapter_version": "0.1.6",
+  "generated_from": "adapters/namespaces.json"
+}

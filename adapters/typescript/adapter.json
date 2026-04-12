@@ -1,0 +1,18 @@
+{
+  "namespace": "ts-cup",
+  "language": "TypeScript",
+  "code": "ts",
+  "ecosystem": "npm",
+  "repo_path": "adapters/typescript",
+  "intent": "official",
+  "repository_state": "implemented",
+  "implementation_kind": "wrapper",
+  "maturity": "alpha",
+  "publication_status": "not-published",
+  "protocol_versions": [
+    "1"
+  ],
+  "depends_on_core_package": true,
+  "adapter_version": "0.1.6",
+  "generated_from": "adapters/namespaces.json"
+}

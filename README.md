@@ -1,13 +1,23 @@
 # CUP
 
-CUP is a protocol-driven UI runtime for modern browsers.
+CUP is a protocol-driven UI runtime for backend-first browser applications.
 
-Your backend returns JSON views that conform to [`schema/uiview.v1.json`](./schema/uiview.v1.json), and the browser runtime validates, renders, and remounts them safely. The practical shape that worked best in the demos is:
+Your backend returns JSON views that match [`schema/uiview.v1.json`](./schema/uiview.v1.json), and the browser runtime validates, renders, and remounts them safely. CUP is built for apps where the backend should stay in charge of routing, authorization, sessions, workflow rules, and mutations.
 
-- backend owns state, permissions, and mutations
-- templates live in files, not giant strings
-- views assemble state and choose templates
-- the browser mounts plain protocol views and posts actions back
+Best fit:
+
+- dashboards
+- admin panels
+- CRMs
+- portals
+- internal tools
+- authenticated workflows
+
+Less ideal:
+
+- animation-heavy consumer SPAs
+- offline-first client apps
+- apps that want most logic in React/Vue/Svelte components
 
 ## Install
 
@@ -15,32 +25,144 @@ Your backend returns JSON views that conform to [`schema/uiview.v1.json`](./sche
 npm install @tosiiko/cup
 ```
 
-## What CUP Is Best At
+## What A CUP View Looks Like
 
-- Server-driven dashboards, admin panels, CRMs, portals, and authenticated workflows
-- Apps where Python, Go, or another backend should own routing, authorization, and business rules
-- Interfaces that benefit from HTML-like templating without locking into a frontend framework
-- Systems where runtime validation and safe-by-default rendering matter
+```json
+{
+  "template": "<section><h1>{{ title }}</h1><button data-action=\"refresh\">Refresh</button></section>",
+  "state": {
+    "title": "Accounts"
+  },
+  "actions": {
+    "refresh": {
+      "type": "fetch",
+      "url": "/api/accounts",
+      "method": "GET"
+    }
+  },
+  "meta": {
+    "version": "1",
+    "title": "Accounts",
+    "route": "/accounts"
+  }
+}
+```
 
-## Best-Practice Use
+The practical model is simple:
 
-The strongest pattern from the demos is:
+- the backend owns state, permissions, and mutations
+- templates live in files, not giant strings
+- views assemble state and choose templates
+- the browser mounts protocol views and posts actions back
 
-1. Keep transport, auth, sessions, and route resolution in backend modules.
-2. Keep CUP templates in a `templates/` folder.
-3. Keep view builders small and focused on state assembly.
-4. Keep the browser shell thin: load a protocol view, validate it, mount it, submit forms back to the server.
+## Quick Start
 
-Avoid this:
+```ts
+import {
+  STARTER_VIEW_POLICY,
+  mountRemoteView,
+  validateProtocolView,
+  validateViewPolicy,
+} from '@tosiiko/cup';
 
-- one giant `server.py` with routes, templates, auth, and data mixed together
-- large inline template strings for every page
-- putting permission logic in the browser
-- using `|safe` with untrusted content
+async function loadView(url: string, root: HTMLElement) {
+  const response = await fetch(url, {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  const payload = await response.json();
+  const view = validateProtocolView(payload);
+  validateViewPolicy(view, STARTER_VIEW_POLICY);
+  mountRemoteView(view, root);
+}
+```
+
+For most CUP apps, that thin browser shell is enough:
+
+- load the current route
+- validate the returned view
+- mount it
+- submit forms or action payloads back to the server
+- remount the next server-approved view
+
+## What Ships In `@tosiiko/cup`
+
+- browser runtime helpers like `mountRemoteView()`, `fetchView()`, and `fetchViewStream()`
+- explicit transport injection for `fetchView()` and `fetchViewStream()` through `fetchImpl`
+- schema validation with `validateProtocolView()` and `validateProtocolPatch()`
+- policy validation with `validateViewPolicy()` and `STARTER_VIEW_POLICY`
+- inspection helpers with `createInspector()` and `inspectView()`
+- patch helpers with `applyProtocolPatch()` and `isProtocolPatch()`
+- repair helpers for generated or malformed inputs
+- offline draft/retry helpers for server-authoritative patterns
+- the versioned wire schema export
+- an optional reference theme stylesheet export
+
+## Core Ideas
+
+### Backend Authority
+
+Keep auth, permissions, sessions, routing, and mutations on the server.
+
+### Thin Browser Surface
+
+The browser should validate, mount, and submit data back. It should not become a second business-logic layer.
+
+### File-Based Templates
+
+Keep markup in template files and view logic in backend modules.
+
+### Explicit Contract
+
+Views are data. That makes them easier to validate, test, inspect, and generate safely.
+
+## Template Rules
+
+CUP templates are intentionally small and predictable.
+
+- `{{ value }}` escapes HTML by default
+- `{{ value|safe }}` renders trusted HTML and must only be used with sanitized content
+- `{% if %}`, `{% elif %}`, `{% else %}`, and `{% endif %}` are supported
+- `{% if %}` supports truthy checks, `not` / `!`, and comparisons with `==`, `!=`, `>`, `<`, `>=`, and `<=`
+- `{% for item in items %}` and `{% endfor %}` are supported
+- `for` blocks expose `loop.index`, `loop.index1`, `loop.first`, and `loop.last`
+- unsupported tags like `{% include %}` fail with parser errors
+
+Good practice:
+
+- keep templates focused on rendering
+- keep permission logic out of templates
+- prefer fixed class names over dynamic class generation
+- treat `|safe` as exceptional
+
+## Security Defaults
+
+Runtime defaults:
+
+- `{{ value }}` escapes by default
+- `fetchView()` validates incoming protocol views by default
+- remote network helpers require an explicit `fetchImpl` from the app
+- the runtime targets modern evergreen browsers
+
+Starter-grade backend defaults should include:
+
+- signed cookie sessions
+- CSRF protection on every state-changing POST
+- no-store headers on HTML and JSON
+- server-owned authorization
+- policy validation before JSON leaves the server
+- relative action URLs by default
+
+Starter policy example:
+
+```ts
+import { STARTER_VIEW_POLICY, validateViewPolicy } from '@tosiiko/cup';
+
+validateViewPolicy(view, STARTER_VIEW_POLICY);
+```
 
 ## Recommended App Structure
-
-This is the structure we now recommend for a real CUP app:
 
 ```text
 my-cup-app/
@@ -70,223 +192,61 @@ my-cup-app/
   README.md
 ```
 
-Why this works well:
+Why this works:
 
-- `server.py` stays thin and readable
+- `server.py` stays thin
 - `routes.py` decides which view to return
-- `actions.py` owns authenticated mutations
-- `security.py` and `sessions.py` isolate security-critical behavior
-- `views/` maps backend state into template state
-- `templates/` lets you work on markup without bloating Python files
-
-## Runtime Example
-
-The browser side should stay small.
-
-```ts
-import {
-  mountRemoteView,
-  STARTER_VIEW_POLICY,
-  validateProtocolView,
-  validateViewPolicy,
-} from '@tosiiko/cup';
-
-async function loadView(url: string, root: HTMLElement) {
-  const response = await fetch(url, {
-    credentials: 'same-origin',
-    headers: { Accept: 'application/json' },
-  });
-
-  const payload = await response.json();
-  const view = validateProtocolView(payload);
-  validateViewPolicy(view, STARTER_VIEW_POLICY);
-  mountRemoteView(view, root);
-}
-```
-
-For most CUP apps, this thin shell is enough:
-
-- load current route
-- intercept internal links
-- submit forms as JSON
-- remount the next protocol view
-
-## Inspector
-
-Phase 1 adds a local inspector API for mounted views.
-
-```ts
-import { createInspector, inspectView } from '@tosiiko/cup';
-
-const inspector = createInspector(root);
-const stop = inspector.subscribe((snapshot) => {
-  console.log(snapshot);
-});
-
-console.log(inspectView(root));
-stop();
-```
-
-Inspector snapshots include:
-
-- the mounted template and state
-- client action names
-- remote action descriptors and metadata
-- the last validation or remote fetch error recorded for that container
-
-## Patch And Stream Helpers
-
-Phase 1 also adds optional partial-update helpers:
-
-- `validateProtocolPatch()`
-- `applyProtocolPatch()`
-- `fetchViewStream()`
-- `createDraftStore()` and `createRetryQueue()`
-- `repairProtocolViewCandidate()` and `repairProtocolPatchCandidate()`
-
-Use them when you need lighter updates, staged loading, or AI-repair loops, but keep full validated views as the default baseline.
-
-## Generators
-
-Phase 1 now includes scaffold generators for the official adapters.
-
-- Python: `cup-python scaffold page ...` and `cup-python scaffold action ...`
-- Go: `go run ./cmd/cupgen scaffold page ...` and `go run ./cmd/cupgen scaffold action ...`
-
-They generate real view/template files plus paste-ready snippets for centralized route, action, data, and browser wiring. See [`docs/generators.md`](./docs/generators.md).
-
-## Template Rules
-
-CUP templates intentionally stay small and predictable.
-
-- `{{ value }}` escapes HTML by default
-- `{{ value|safe }}` renders trusted HTML and must only be used with sanitized content
-- `{% if %}`, `{% elif %}`, `{% else %}`, and `{% endif %}` are supported
-- `{% if %}` conditions support truthy checks, `not` / `!`, and comparisons with `==`, `!=`, `>`, `<`, `>=`, and `<=`
-- `{% for item in items %}` and `{% endfor %}` are supported
-- `for` blocks expose `loop.index`, `loop.index1`, `loop.first`, and `loop.last`
-- unsupported tags like `{% include %}` fail with parser errors
-
-Recommended template practice:
-
-- keep page markup in template files
-- keep logic in the backend, not in the template
-- use templates for rendering, not for permission checks
-- prefer fixed class names over dynamic class generation
-
-## Security Defaults And Guidance
-
-CUP now ships with safer defaults, but production safety still depends on backend design.
-
-Runtime defaults:
-
-- `{{ value }}` escapes HTML by default
-- `fetchView()` validates incoming protocol views by default
-- the runtime targets modern evergreen browsers
-
-Backend guidance:
-
-- validate protocol views before sending or mounting them
-- run policy validation in starters and authenticated apps before sending JSON to the browser
-- use signed server-side sessions for authenticated apps
-- require CSRF tokens on every state-changing POST
-- enforce authorization on the server for every protected route and action
-- return no-store headers for authenticated HTML and JSON
-- keep audit events and session controls outside the browser
-
-Starter policy example:
-
-```ts
-import { STARTER_VIEW_POLICY, validateViewPolicy } from '@tosiiko/cup';
-
-validateViewPolicy(view, STARTER_VIEW_POLICY);
-```
-
-The starter policy requires `meta.version`, `meta.title`, and `meta.route`, rejects unsafe template patterns, and keeps action URLs relative by default.
-
-## Styling
-
-CUP works with plain CSS, design systems, or utility frameworks like Tailwind.
-
-Tailwind works well if you:
-
-- scan your template files in Tailwind `content`
-- include backend files if class names live there
-- prefer literal class names over dynamic string construction
-- keep a small custom stylesheet for app-level tokens and special components
-
-An optional reference stylesheet now ships with the package:
-
-```ts
-import '@tosiiko/cup/styles/reference.css';
-```
-
-It provides a shared component vocabulary for shell layouts, forms, tables, dialogs, banners, tabs, pagination, empty states, and error states. See [`docs/reference-ui.md`](./docs/reference-ui.md) for the class map.
-
-## AI Use
-
-When AI generates CUP views, keep the contract and the trust boundary separate:
-
-- generate schema-valid JSON
-- validate first, then run policy checks
-- keep action URLs relative unless a human changes policy
-- treat `|safe` and any trusted HTML path as exceptional
-- keep permissions and mutations on the server
-
-See [`docs/ai.md`](./docs/ai.md) for the compact guidance used by this repo.
-The prompt/eval/fixture loop is in [`docs/ai-evals.md`](./docs/ai-evals.md).
-
-## Core Types
-
-- `ProtocolView`: wire-format view returned by a backend
-- `ClientView`: browser-local mounted view with function handlers
-- `UIView`: alias of `ProtocolView` for the schema contract
-
-## Adapters
-
-- Python: [`adapters/python`](./adapters/python)
-- Go: [`adapters/go`](./adapters/go)
-- Node backend guidance: [`docs/node.md`](./docs/node.md)
-
-Both adapters emit the same protocol shape that the TypeScript runtime accepts, and both include validation helpers.
-
-Policy helpers are available in the official adapters as well:
-
-- Python: `validate_view_policy(..., STARTER_VIEW_POLICY)`
-- Go: `ValidatePolicy(..., cup.StarterViewPolicy)`
+- `actions.py` owns mutations
+- `security.py` and `sessions.py` isolate security-sensitive code
+- `views/` assembles template state
+- `templates/` keeps markup editable without bloating backend files
 
 ## Official Starters
 
-- Starter index: [`starters`](./starters)
-- Python minimal starter: [`starters/python-minimal`](./starters/python-minimal)
-- Python portal workflow starter: [`starters/python-portal`](./starters/python-portal)
-- Python CRM starter: [`starters/python-crm`](./starters/python-crm)
-- Node dashboard starter: [`starters/node-dashboard`](./starters/node-dashboard)
+- [Starter index](./starters)
+- [Python minimal starter](./starters/python-minimal)
+- [Python portal workflow starter](./starters/python-portal)
+- [Python CRM starter](./starters/python-crm)
+- [Node dashboard starter](./starters/node-dashboard)
 
-If you want the smallest real starting point, begin with [`starters/python-minimal`](./starters/python-minimal).
-If you want the richer authenticated reference shell, begin with [`starters/python-crm`](./starters/python-crm).
-If you want a workflow-oriented request/review loop, begin with [`starters/python-portal`](./starters/python-portal).
-If you want the authenticated Node path, begin with [`starters/node-dashboard`](./starters/node-dashboard).
+Start here:
 
-## Additional Docs
+- smallest real starting point: [python-minimal](./starters/python-minimal)
+- request/review/history workflow: [python-portal](./starters/python-portal)
+- richer authenticated shell: [python-crm](./starters/python-crm)
+- authenticated Node backend path: [node-dashboard](./starters/node-dashboard)
 
-- Architecture: [`docs/architecture.md`](./docs/architecture.md)
-- Routing and streaming: [`docs/routing.md`](./docs/routing.md)
-- Security: [`docs/security.md`](./docs/security.md)
-- Testing: [`docs/testing.md`](./docs/testing.md)
-- Compatibility guarantees: [`docs/compatibility.md`](./docs/compatibility.md)
+## Adapters
+
+- [Python adapter](./adapters/python)
+- [Go adapter](./adapters/go)
+- [Node backend guidance](./docs/node.md)
+- [Adapter namespaces and status](./docs/adapters.md)
+
+Production adapters today are Python and Go.
+
+Node and TypeScript now also have alpha wrapper adapter paths, and Rust and Java have alpha source adapters in-repo. See [docs/adapters.md](./docs/adapters.md) for the current implementation level of each language path.
+
+## Docs
+
+- [Architecture](./docs/architecture.md)
+- [Routing and streaming](./docs/routing.md)
+- [Security](./docs/security.md)
+- [Testing](./docs/testing.md)
+- [Compatibility and deprecation policy](./docs/compatibility.md)
+- [Reference UI vocabulary](./docs/reference-ui.md)
+- [Generators](./docs/generators.md)
+- [AI guidance](./docs/ai.md)
+- [AI prompts, evals, and fixtures](./docs/ai-evals.md)
+- [Migration notes](./docs/migrations/pre-1.0-to-0.1.3.md)
 
 ## Reference Demos
 
-- Simple login demo: [`demo/login`](./demo/login)
-- Structured CRM app: [`demo/dashboard2`](./demo/dashboard2)
-- Financial dashboard prototype: [`demo/dashboard`](./demo/dashboard)
+- [Simple login demo](./demo/login)
+- [Structured CRM demo](./demo/dashboard2)
+- [Financial dashboard prototype](./demo/dashboard)
 
-Use demos to study patterns and flows. Use starters when you want to begin a new project.
-
-## Migration Notes
-
-- Pre-1.0 migration guide: [`docs/migrations/pre-1.0-to-0.1.3.md`](./docs/migrations/pre-1.0-to-0.1.3.md)
+Use demos to study patterns. Use starters to begin a real project.
 
 ## Development
 
@@ -299,12 +259,25 @@ npm run starter:smoke
 npm run pack:check
 ```
 
-Useful demo commands:
+Useful local commands:
 
 ```bash
 python3 demo/login/server.py
 python3 demo/dashboard/server.py
 python3 demo/dashboard2/server.py
 python3 starters/python-minimal/server.py
+python3 starters/python-portal/server.py
 python3 starters/python-crm/server.py
+node starters/node-dashboard/server.mjs
 ```
+
+## Status
+
+- protocol version: `1`
+- package version: `0.1.6`
+- browser target: modern evergreen browsers
+- current focus: stable backend-first runtime, adapters, starters, and release tooling
+
+## License
+
+Current published releases are licensed under the [MIT License](./LICENSE).

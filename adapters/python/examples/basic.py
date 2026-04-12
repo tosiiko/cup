@@ -9,7 +9,7 @@ CORS headers are included so the Vite dev server (localhost:5173) can reach it.
 
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from cup import FetchAction, UIView
+from cup import STARTER_VIEW_POLICY, FetchAction, UIView, validate_view_policy
 
 # ── Shared state (in-memory for the demo) ────────────────────────────────────
 
@@ -54,6 +54,12 @@ def dashboard_view() -> UIView:
     )
 
 
+def send_view(handler: BaseHTTPRequestHandler, view: UIView) -> None:
+    validate_view_policy(view, STARTER_VIEW_POLICY)
+    body, content_type = view.to_response()
+    handler._send(body, 200, content_type)
+
+
 # ── HTTP handler ──────────────────────────────────────────────────────────────
 
 class Handler(BaseHTTPRequestHandler):
@@ -82,7 +88,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/":
-            self._send(dashboard_view().to_json())
+            send_view(self, dashboard_view())
         else:
             self._send(json.dumps({"error": "not found"}), 404)
 
@@ -98,7 +104,7 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         # Every action returns the full updated UIView — the runtime remounts it
-        self._send(dashboard_view().to_json())
+        send_view(self, dashboard_view())
 
 
 if __name__ == "__main__":

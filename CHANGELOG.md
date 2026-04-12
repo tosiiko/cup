@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 0.1.6
+
+- Synced adapter generators, adapter manifests, scaffold metadata, and release docs to the current package version, with regression tests that now catch version drift automatically.
+- Formalized CUP compatibility, version negotiation, and deprecation policy for the `v1` wire contract and official adapter surfaces.
+- Split the adapter registry model into clearer dimensions for intent, repository state, implementation kind, maturity, publication status, and protocol version support.
+- Clarified the optional reference stylesheet as a reference theme rather than a protocol-bound visual requirement, including documented layer boundaries and theme extensibility guidance.
+- Verified `java-cup` locally with `javac` compilation and example execution, and updated the Java adapter docs/registry notes accordingly.
+
+## 0.1.5
+
+- Removed the remote runtime's implicit global network client fallback so published bundles no longer bake in direct `fetch` access.
+- Made `fetchView()` and `fetchViewStream()` require an explicit `fetchImpl`, keeping transport ownership in the host app.
+- Added regression coverage for explicit remote transport injection and refreshed the shipped security and routing docs to match.
+
 ## 0.1.4
 
 - Restored published TypeScript declaration files and `types` exports for the runtime package.

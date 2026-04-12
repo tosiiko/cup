@@ -49,7 +49,7 @@ describe('cross-language protocol contracts', () => {
     expect(view.meta).toEqual({
       version: '1',
       lang: 'python',
-      generator: 'cup-python/0.1.0',
+      generator: 'cup-python/0.1.6',
       title: 'Fixture',
       route: '/fixture',
     });
@@ -67,7 +67,7 @@ describe('cross-language protocol contracts', () => {
     expect(view.meta).toEqual({
       version: '1',
       lang: 'go',
-      generator: 'cup-go/0.1.0',
+      generator: 'cup-go/0.1.6',
       title: 'Fixture',
       route: '/fixture',
     });
@@ -85,7 +85,7 @@ describe('cross-language protocol contracts', () => {
     expect(view.meta).toEqual({
       version: '1',
       lang: 'node',
-      generator: 'cup-node-fixture/0.1.0',
+      generator: 'node-cup/0.1.6',
       title: 'Fixture',
       route: '/fixture',
     });

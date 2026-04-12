@@ -1,0 +1,360 @@
+{
+  "version": 2,
+  "generated_at": "2026-04-13",
+  "notes": [
+    "This file is the canonical CUP adapter namespace registry inside the repository.",
+    "Intent and implementation reality are tracked separately so namespace planning does not overstate what is published or production-ready.",
+    "Registry publication, in-repo implementation, maturity, and protocol compatibility are independent dimensions."
+  ],
+  "core": {
+    "name": "@tosiiko/cup",
+    "role": "core-runtime",
+    "package_version": "0.1.6",
+    "publication_status": "published",
+    "protocol_versions": [
+      "1"
+    ]
+  },
+  "adapters": [
+    {
+      "language": "Python",
+      "code": "py",
+      "namespace": "py-cup",
+      "repo_path": "adapters/python",
+      "ecosystem": "pypi",
+      "intent": "official",
+      "repository_state": "implemented",
+      "implementation_kind": "production",
+      "maturity": "stable",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": false,
+      "notes": "Current in-repo adapter exists under adapters/python. External registry publication under this namespace is a future release decision."
+    },
+    {
+      "language": "Go",
+      "code": "go",
+      "namespace": "go-cup",
+      "repo_path": "adapters/go",
+      "ecosystem": "go-module",
+      "intent": "official",
+      "repository_state": "implemented",
+      "implementation_kind": "production",
+      "maturity": "stable",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": false,
+      "notes": "Current in-repo adapter exists under adapters/go. External registry publication under this namespace is a future release decision."
+    },
+    {
+      "language": "Node.js",
+      "code": "node",
+      "namespace": "node-cup",
+      "repo_path": "adapters/node",
+      "ecosystem": "npm",
+      "intent": "official",
+      "repository_state": "implemented",
+      "implementation_kind": "wrapper",
+      "maturity": "alpha",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": true,
+      "notes": "Node is currently supported through the core @tosiiko/cup package and the node-dashboard starter. This adapter path now exposes dedicated Node helper functions as an alpha wrapper."
+    },
+    {
+      "language": "TypeScript",
+      "code": "ts",
+      "namespace": "ts-cup",
+      "repo_path": "adapters/typescript",
+      "ecosystem": "npm",
+      "intent": "official",
+      "repository_state": "implemented",
+      "implementation_kind": "wrapper",
+      "maturity": "alpha",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": true,
+      "notes": "TypeScript/browser support is currently delivered by the core @tosiiko/cup package. This adapter path now exposes dedicated TypeScript helper functions as an alpha wrapper."
+    },
+    {
+      "language": "Rust",
+      "code": "rs",
+      "namespace": "rs-cup",
+      "repo_path": "adapters/rust",
+      "ecosystem": "crates.io",
+      "intent": "official",
+      "repository_state": "implemented",
+      "implementation_kind": "source",
+      "maturity": "alpha",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": false,
+      "notes": "High-priority adapter target with a real in-repo alpha crate and cargo tests."
+    },
+    {
+      "language": "Java",
+      "code": "java",
+      "namespace": "java-cup",
+      "repo_path": "adapters/java",
+      "ecosystem": "maven-central",
+      "intent": "official",
+      "repository_state": "implemented",
+      "implementation_kind": "source",
+      "maturity": "alpha",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": false,
+      "notes": "Intended for Spring/Jakarta backend support. The source adapter path is implemented in-repo, compiles locally, and its example has been executed successfully in this environment."
+    },
+    {
+      "language": "C#/.NET",
+      "code": "dotnet",
+      "namespace": "dotnet-cup",
+      "repo_path": "adapters/dotnet",
+      "ecosystem": "nuget",
+      "intent": "official",
+      "repository_state": "bootstrapped",
+      "implementation_kind": "scaffold",
+      "maturity": "scaffold",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": false,
+      "notes": "Intended for ASP.NET backend support."
+    },
+    {
+      "language": "PHP",
+      "code": "php",
+      "namespace": "php-cup",
+      "repo_path": "adapters/php",
+      "ecosystem": "packagist",
+      "intent": "official",
+      "repository_state": "bootstrapped",
+      "implementation_kind": "scaffold",
+      "maturity": "scaffold",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": false,
+      "notes": "Intended for Laravel/Symfony style server adapters."
+    },
+    {
+      "language": "Ruby",
+      "code": "rb",
+      "namespace": "rb-cup",
+      "repo_path": "adapters/ruby",
+      "ecosystem": "rubygems",
+      "intent": "official",
+      "repository_state": "bootstrapped",
+      "implementation_kind": "scaffold",
+      "maturity": "scaffold",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": false,
+      "notes": "Intended for Rails-style server adapters."
+    },
+    {
+      "language": "Elixir",
+      "code": "ex",
+      "namespace": "ex-cup",
+      "repo_path": "adapters/elixir",
+      "ecosystem": "hex",
+      "intent": "official",
+      "repository_state": "bootstrapped",
+      "implementation_kind": "scaffold",
+      "maturity": "scaffold",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": false,
+      "notes": "Intended for Phoenix-compatible server workflows."
+    },
+    {
+      "language": "Kotlin",
+      "code": "kt",
+      "namespace": "kt-cup",
+      "repo_path": "adapters/kotlin",
+      "ecosystem": "maven-central",
+      "intent": "official",
+      "repository_state": "bootstrapped",
+      "implementation_kind": "scaffold",
+      "maturity": "scaffold",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": false,
+      "notes": "Separate from java-cup because Kotlin server frameworks may want their own release track."
+    },
+    {
+      "language": "Swift",
+      "code": "swift",
+      "namespace": "swift-cup",
+      "repo_path": "adapters/swift",
+      "ecosystem": "swift-package-index",
+      "intent": "official",
+      "repository_state": "bootstrapped",
+      "implementation_kind": "scaffold",
+      "maturity": "scaffold",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": false,
+      "notes": "Primarily for server-side Swift use cases."
+    },
+    {
+      "language": "Dart",
+      "code": "dart",
+      "namespace": "dart-cup",
+      "repo_path": "adapters/dart",
+      "ecosystem": "pub.dev",
+      "intent": "official",
+      "repository_state": "bootstrapped",
+      "implementation_kind": "scaffold",
+      "maturity": "scaffold",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": false,
+      "notes": "Primarily for server-side Dart rather than Flutter UI code."
+    },
+    {
+      "language": "Clojure",
+      "code": "clj",
+      "namespace": "clj-cup",
+      "repo_path": "adapters/clojure",
+      "ecosystem": "clojars",
+      "intent": "official",
+      "repository_state": "bootstrapped",
+      "implementation_kind": "scaffold",
+      "maturity": "scaffold",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": false,
+      "notes": "JVM functional adapter target."
+    },
+    {
+      "language": "Lua",
+      "code": "lua",
+      "namespace": "lua-cup",
+      "repo_path": "adapters/lua",
+      "ecosystem": "luarocks",
+      "intent": "official",
+      "repository_state": "bootstrapped",
+      "implementation_kind": "scaffold",
+      "maturity": "scaffold",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": false,
+      "notes": "Low-priority future adapter target."
+    },
+    {
+      "language": "Zig",
+      "code": "zig",
+      "namespace": "zig-cup",
+      "repo_path": "adapters/zig",
+      "ecosystem": "zig-package-manager",
+      "intent": "official",
+      "repository_state": "bootstrapped",
+      "implementation_kind": "scaffold",
+      "maturity": "scaffold",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": false,
+      "notes": "Low-priority future adapter target."
+    },
+    {
+      "language": "Nim",
+      "code": "nim",
+      "namespace": "nim-cup",
+      "repo_path": "adapters/nim",
+      "ecosystem": "nimble",
+      "intent": "official",
+      "repository_state": "bootstrapped",
+      "implementation_kind": "scaffold",
+      "maturity": "scaffold",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": false,
+      "notes": "Low-priority future adapter target."
+    },
+    {
+      "language": "OCaml",
+      "code": "ml",
+      "namespace": "ocaml-cup",
+      "repo_path": "adapters/ocaml",
+      "ecosystem": "opam",
+      "intent": "official",
+      "repository_state": "bootstrapped",
+      "implementation_kind": "scaffold",
+      "maturity": "scaffold",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": false,
+      "notes": "Functional adapter target."
+    },
+    {
+      "language": "Perl",
+      "code": "pl",
+      "namespace": "perl-cup",
+      "repo_path": "adapters/perl",
+      "ecosystem": "cpan",
+      "intent": "official",
+      "repository_state": "bootstrapped",
+      "implementation_kind": "scaffold",
+      "maturity": "scaffold",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": false,
+      "notes": "Legacy backend adapter target."
+    },
+    {
+      "language": "Haskell",
+      "code": "hs",
+      "namespace": "hs-cup",
+      "repo_path": "adapters/haskell",
+      "ecosystem": "hackage",
+      "intent": "official",
+      "repository_state": "bootstrapped",
+      "implementation_kind": "scaffold",
+      "maturity": "scaffold",
+      "publication_status": "not-published",
+      "protocol_versions": [
+        "1"
+      ],
+      "depends_on_core_package": false,
+      "notes": "Functional adapter target."
+    }
+  ]
+}

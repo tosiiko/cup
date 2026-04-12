@@ -1,0 +1,11 @@
+{
+  "name": "tosiiko/php-cup",
+  "description": "CUP PHP adapter scaffold",
+  "type": "library",
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "Tosiiko\\\\Cup\\\\": "src/"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 {
   "name": "@tosiiko/cup",
-  "version": "0.1.4",
+  "version": "0.1.6",
   "description": "CUP universal UI runtime for protocol-driven browser rendering",
   "type": "module",
   "main": "./dist/index.js",

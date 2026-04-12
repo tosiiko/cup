@@ -55,34 +55,42 @@ func dashboardView() *cup.UIView {
 			Route("/")
 }
 
+func writeView(w http.ResponseWriter, view *cup.UIView) {
+	if err := cup.ValidatePolicy(view.ToMap(), cup.StarterViewPolicy); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := view.WriteJSON(w); err != nil {
+		log.Println("write error:", err)
+	}
+}
+
 func main() {
 	mux := http.NewServeMux()
 
 	// Serve the initial UIView
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		corsHeaders(w)
-		if err := dashboardView().WriteJSON(w); err != nil {
-			log.Println("write error:", err)
-		}
+		writeView(w, dashboardView())
 	})
 
 	// Actions — each returns the updated UIView
 	mux.HandleFunc("POST /api/increment", func(w http.ResponseWriter, r *http.Request) {
 		corsHeaders(w)
 		count.Add(1)
-		dashboardView().WriteJSON(w)
+		writeView(w, dashboardView())
 	})
 
 	mux.HandleFunc("POST /api/decrement", func(w http.ResponseWriter, r *http.Request) {
 		corsHeaders(w)
 		count.Add(-1)
-		dashboardView().WriteJSON(w)
+		writeView(w, dashboardView())
 	})
 
 	mux.HandleFunc("POST /api/reset", func(w http.ResponseWriter, r *http.Request) {
 		corsHeaders(w)
 		count.Store(0)
-		dashboardView().WriteJSON(w)
+		writeView(w, dashboardView())
 	})
 
 	// Handle preflight

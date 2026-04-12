@@ -78,7 +78,7 @@ export async function fetchView(
   let currentState: Record<string, JSONValue> = {};
   let currentView: ProtocolView | null = null;
   let destroyed = false;
-  const fetchImpl = options.fetchImpl ?? fetch;
+  const fetchImpl = requireFetchImpl(options.fetchImpl, 'fetchView');
 
   async function load(fetchUrl: string, method: HTTPMethod = 'GET', body?: Record<string, JSONValue>): Promise<RemotePayload> {
     const controller = new AbortController();
@@ -239,7 +239,7 @@ export async function fetchViewStream(
   let currentView: ProtocolView | null = null;
   let destroyed = false;
   let closed = false;
-  const fetchImpl = options.fetchImpl ?? fetch;
+  const fetchImpl = requireFetchImpl(options.fetchImpl, 'fetchViewStream');
   const controller = new AbortController();
   const headers = {
     Accept: 'application/x-ndjson, application/json',
@@ -459,6 +459,18 @@ export function mountRemoteView(remoteView: ProtocolView, container: Element, op
   };
   mount(container, localView);
   recordProtocolMount(container, view);
+}
+
+function requireFetchImpl(
+  fetchImpl: FetchViewOptions['fetchImpl'],
+  caller: 'fetchView' | 'fetchViewStream',
+): NonNullable<FetchViewOptions['fetchImpl']> {
+  if (fetchImpl) {
+    return fetchImpl;
+  }
+  throw new Error(
+    `[CUP] ${caller} requires options.fetchImpl. Inject the transport from your app instead of relying on an implicit global network client.`,
+  );
 }
 
 function normalizePayload(payload: unknown, shouldValidate = true): RemotePayload {

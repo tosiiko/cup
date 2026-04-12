@@ -1,0 +1,18 @@
+{
+  "namespace": "kt-cup",
+  "language": "Kotlin",
+  "code": "kt",
+  "ecosystem": "maven-central",
+  "repo_path": "adapters/kotlin",
+  "intent": "official",
+  "repository_state": "bootstrapped",
+  "implementation_kind": "scaffold",
+  "maturity": "scaffold",
+  "publication_status": "not-published",
+  "protocol_versions": [
+    "1"
+  ],
+  "depends_on_core_package": false,
+  "adapter_version": "0.1.6",
+  "generated_from": "adapters/namespaces.json"
+}
