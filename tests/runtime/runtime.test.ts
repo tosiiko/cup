@@ -6,11 +6,10 @@ import {
   createRouter,
   createSignal,
   errorMiddleware,
-  fetchView,
-  fetchViewStream,
   mount,
   mountRemoteView,
 } from '../../src/index.js';
+import { fetchView, fetchViewStream } from '../../adapters/typescript/index';
 
 describe('runtime integration', () => {
   beforeEach(() => {

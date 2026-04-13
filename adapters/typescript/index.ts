@@ -13,9 +13,11 @@ import type {
 } from '../../dist/index.js';
 
 export * from '../../dist/index.js';
+export type { FetchViewOptions, FetchViewStreamOptions, RemoteMount, RemoteStream } from './remote';
+export { fetchView, fetchViewStream } from './remote';
 
 export const ADAPTER_NAME = 'ts-cup';
-export const ADAPTER_GENERATOR = 'ts-cup/0.1.6';
+export const ADAPTER_GENERATOR = 'ts-cup/0.2.0';
 export const ADAPTER_LANG = 'ts';
 
 export interface TypeScriptAdapterOptions {

@@ -219,6 +219,15 @@ def main() -> None:
     if not DIST_DIR.exists():
         raise SystemExit("dist/ not found. Run `npm run build` before starting the dashboard2 demo.")
 
-    server = HTTPServer((HOST, PORT), CRMHandler)
+    try:
+        server = HTTPServer((HOST, PORT), CRMHandler)
+    except OSError as error:
+        if error.errno == 48:
+            raise SystemExit(
+                f"Port {PORT} is already in use on {HOST}. Stop the existing process or run "
+                f"`CUP_DASHBOARD2_PORT={PORT + 1} python server.py`.",
+            ) from error
+        raise
+
     print(f"CUP CRM dashboard demo -> http://{HOST}:{PORT}")
     server.serve_forever()

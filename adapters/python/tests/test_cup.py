@@ -73,7 +73,7 @@ class CupPythonTests(unittest.TestCase):
 
     def test_to_json_includes_meta(self) -> None:
         payload = json.loads(UIView("<p>{{ title }}</p>").state(title="Hi").to_json())
-        self.assertEqual(payload["meta"]["generator"], "cup-python/0.1.6")
+        self.assertEqual(payload["meta"]["generator"], "cup-python/0.2.0")
 
 
 if __name__ == "__main__":

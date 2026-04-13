@@ -4,7 +4,7 @@ defmodule ExCup.MixProject do
   def project do
     [
       app: :ex_cup,
-      version: "0.1.6",
+      version: "0.2.0",
       elixir: "~> 1.16"
     ]
   end

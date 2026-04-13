@@ -1,50 +1,28 @@
-/**
- * CUP Remote Module — Phase 4
- *
- * Bridges the TypeScript runtime with multi-language backends.
- *
- * fetchView(url, container)
- *   → GETs a UIView JSON from any backend, mounts it, wires server actions.
- *
- * Server actions (type: "fetch") POST the current state snapshot to the
- * endpoint and remount the returned UIView — no page reload required.
- *
- * Client actions (type: "emit", "navigate") are handled entirely in the browser.
- */
-
-import { mount } from './mount.js';
-import { unbind } from './bind.js';
+import { mount } from '../../src/mount.js';
+import { unbind } from '../../src/bind.js';
 import {
   clearInspection,
   recordInspectionError,
   recordProtocolMount,
-} from './inspect.js';
-import { applyProtocolPatch, isProtocolPatch } from './patch.js';
+} from '../../src/inspect.js';
+import { applyProtocolPatch, isProtocolPatch } from '../../src/patch.js';
 import type {
-  ActionDescriptor,
   HTTPMethod,
   JSONValue,
   ProtocolPatch,
   ProtocolView,
-} from './protocol.js';
-import type { ClientView } from './types.js';
-import { validateProtocolPatch, validateProtocolView } from './validate.js';
-
-// ── Remote fetch + mount ──────────────────────────────────────────────────────
+} from '../../src/protocol.js';
+import type { ClientView } from '../../src/types.js';
+import { validateProtocolPatch, validateProtocolView } from '../../src/validate.js';
 
 export interface RemoteMount {
-  /** Refetch the view from the original URL and remount. */
   refresh(): Promise<void>;
-  /** Unmount and clean up all subscriptions. */
   destroy(): void;
 }
 
 export interface RemoteStream {
-  /** Abort the stream without clearing the mounted view. */
   close(): void;
-  /** Abort the stream and unmount the current view. */
   destroy(): void;
-  /** Resolves when the stream finishes or rejects on stream error. */
   done: Promise<void>;
 }
 
@@ -62,14 +40,6 @@ export interface FetchViewStreamOptions extends FetchViewOptions {
 
 type RemotePayload = ProtocolView | ProtocolPatch;
 
-/**
- * Fetch a UIView from a backend URL, mount it into container,
- * and wire all action descriptors.
- *
- * @param url       Backend endpoint that returns UIView JSON
- * @param container DOM element to mount into
- * @param headers   Extra request headers (e.g. Authorization)
- */
 export async function fetchView(
   url: string,
   container: Element,
@@ -80,11 +50,15 @@ export async function fetchView(
   let destroyed = false;
   const fetchImpl = requireFetchImpl(options.fetchImpl, 'fetchView');
 
-  async function load(fetchUrl: string, method: HTTPMethod = 'GET', body?: Record<string, JSONValue>): Promise<RemotePayload> {
+  async function load(
+    fetchUrl: string,
+    method: HTTPMethod = 'GET',
+    body?: Record<string, JSONValue>,
+  ): Promise<RemotePayload> {
     const controller = new AbortController();
     const timeoutMs = options.timeoutMs ?? 5000;
     const headers = { 'Content-Type': 'application/json', ...(options.headers ?? {}) };
-    const opts: RequestInit = {
+    const request: RequestInit = {
       method,
       headers,
       signal: controller.signal,
@@ -95,17 +69,17 @@ export async function fetchView(
       if (method === 'GET') {
         fetchUrl = appendQuery(fetchUrl, body);
       } else {
-        opts.body = JSON.stringify(body);
+        request.body = JSON.stringify(body);
       }
     }
 
     try {
-      const res = await fetchImpl(fetchUrl, opts);
-      if (!res.ok) {
-        throw new Error(`[CUP] fetchView: ${method} ${fetchUrl} -> ${res.status} ${res.statusText}`);
+      const response = await fetchImpl(fetchUrl, request);
+      if (!response.ok) {
+        throw new Error(`[CUP] fetchView: ${method} ${fetchUrl} -> ${response.status} ${response.statusText}`);
       }
 
-      const payload = await res.json();
+      const payload = await response.json();
       return normalizePayload(payload, options.validate);
     } catch (error) {
       const normalized = error instanceof Error ? error : new Error(String(error));
@@ -122,8 +96,6 @@ export async function fetchView(
   function mountRemote(remoteView: ProtocolView): void {
     currentState = remoteView.state;
     currentView = remoteView;
-
-    // Unbind previous subscriptions before remounting
     unbind(container);
 
     const localView: ClientView = {
@@ -134,11 +106,6 @@ export async function fetchView(
 
     mount(container, localView);
     recordProtocolMount(container, remoteView);
-
-    // Log source language in dev mode
-    if (remoteView.meta?.lang) {
-      console.debug(`[CUP] mounted view from ${remoteView.meta.generator ?? remoteView.meta.lang}`);
-    }
   }
 
   function buildActionHandlers(
@@ -148,7 +115,6 @@ export async function fetchView(
     if (!remoteView.actions) return undefined;
 
     const handlers: NonNullable<ClientView['actions']> = {};
-
     for (const [name, descriptor] of Object.entries(remoteView.actions)) {
       switch (descriptor.type) {
         case 'fetch':
@@ -161,15 +127,14 @@ export async function fetchView(
               ));
               if (destroyed) return;
               mountRemote(updated);
-            } catch (err) {
-              const error = err instanceof Error ? err : new Error(String(err));
+            } catch (error) {
+              const normalized = error instanceof Error ? error : new Error(String(error));
               if (!(event instanceof Event)) {
-                console.error(`[CUP] action "${name}" failed:`, error);
+                console.error(`[CUP] action "${name}" failed:`, normalized);
               }
             }
           };
           break;
-
         case 'emit':
           handlers[name] = () => {
             el.dispatchEvent(
@@ -180,7 +145,6 @@ export async function fetchView(
             );
           };
           break;
-
         case 'navigate':
           handlers[name] = () => {
             if (descriptor.replace) {
@@ -197,7 +161,6 @@ export async function fetchView(
     return handlers;
   }
 
-  // Initial load
   const initialView = resolvePayload(await load(url));
   if (destroyed) {
     throw new Error('[CUP] remote mount destroyed before initial load completed');
@@ -268,7 +231,6 @@ export async function fetchViewStream(
     if (!remoteView.actions) return undefined;
 
     const handlers: NonNullable<ClientView['actions']> = {};
-
     for (const [name, descriptor] of Object.entries(remoteView.actions)) {
       switch (descriptor.type) {
         case 'fetch':
@@ -281,15 +243,14 @@ export async function fetchViewStream(
               );
               if (destroyed) return;
               mountRemote(updated);
-            } catch (err) {
-              const error = err instanceof Error ? err : new Error(String(err));
+            } catch (error) {
+              const normalized = error instanceof Error ? error : new Error(String(error));
               if (!(event instanceof Event)) {
-                console.error(`[CUP] action "${name}" failed:`, error);
+                console.error(`[CUP] action "${name}" failed:`, normalized);
               }
             }
           };
           break;
-
         case 'emit':
           handlers[name] = () => {
             el.dispatchEvent(
@@ -300,7 +261,6 @@ export async function fetchViewStream(
             );
           };
           break;
-
         case 'navigate':
           handlers[name] = () => {
             if (descriptor.replace) {
@@ -341,11 +301,11 @@ export async function fetchViewStream(
     }
 
     try {
-      const res = await fetchImpl(fetchUrl, request);
-      if (!res.ok) {
-        throw new Error(`[CUP] fetchViewStream: ${method} ${fetchUrl} -> ${res.status} ${res.statusText}`);
+      const response = await fetchImpl(fetchUrl, request);
+      if (!response.ok) {
+        throw new Error(`[CUP] fetchViewStream: ${method} ${fetchUrl} -> ${response.status} ${response.statusText}`);
       }
-      const payload = await res.json();
+      const payload = await response.json();
       return resolvePayload(normalizePayload(payload, options.validate));
     } catch (error) {
       const normalized = error instanceof Error ? error : new Error(String(error));
@@ -437,30 +397,6 @@ export async function fetchViewStream(
   };
 }
 
-// ── Utility: parse a static RemoteUIView object (for testing / SSR) ───────────
-
-/**
- * Mount a RemoteUIView that was already fetched or inlined as JSON.
- * Useful for server-side rendering or unit tests.
- */
-export function mountRemoteView(remoteView: ProtocolView, container: Element, options: { validate?: boolean } = {}): void {
-  let view: ProtocolView;
-  try {
-    view = options.validate === false ? remoteView : validateProtocolView(remoteView);
-  } catch (error) {
-    const normalized = error instanceof Error ? error : new Error(String(error));
-    recordInspectionError(container, normalized);
-    throw normalized;
-  }
-  const localView: ClientView = {
-    template: view.template,
-    state: view.state,
-    actions: buildStaticActions(view, container),
-  };
-  mount(container, localView);
-  recordProtocolMount(container, view);
-}
-
 function requireFetchImpl(
   fetchImpl: FetchViewOptions['fetchImpl'],
   caller: 'fetchView' | 'fetchViewStream',
@@ -468,6 +404,7 @@ function requireFetchImpl(
   if (fetchImpl) {
     return fetchImpl;
   }
+
   throw new Error(
     `[CUP] ${caller} requires options.fetchImpl. Inject the transport from your app instead of relying on an implicit global network client.`,
   );
@@ -477,32 +414,8 @@ function normalizePayload(payload: unknown, shouldValidate = true): RemotePayloa
   if (!shouldValidate) {
     return isProtocolPatch(payload) ? payload as ProtocolPatch : payload as ProtocolView;
   }
-  return isProtocolPatch(payload) ? validateProtocolPatch(payload) : validateProtocolView(payload);
-}
 
-function buildStaticActions(remoteView: ProtocolView, container: Element): ClientView['actions'] {
-  if (!remoteView.actions) return undefined;
-  const handlers: NonNullable<ClientView['actions']> = {};
-  for (const [name, descriptor] of Object.entries(remoteView.actions)) {
-    if (descriptor.type === 'emit') {
-      handlers[name] = () => {
-        container.dispatchEvent(
-          new CustomEvent(descriptor.event, { bubbles: true, detail: descriptor.detail ?? {} }),
-        );
-      };
-    } else if (descriptor.type === 'navigate') {
-      handlers[name] = () => {
-        if (descriptor.replace) {
-          history.replaceState(null, '', descriptor.url);
-        } else {
-          history.pushState(null, '', descriptor.url);
-        }
-        window.dispatchEvent(new PopStateEvent('popstate'));
-      };
-    }
-    // fetch actions are no-ops in static mode
-  }
-  return handlers;
+  return isProtocolPatch(payload) ? validateProtocolPatch(payload) : validateProtocolView(payload);
 }
 
 function appendQuery(url: string, values: Record<string, JSONValue>): string {
@@ -520,5 +433,3 @@ function serializeQueryValue(value: JSONValue): string {
   }
   return JSON.stringify(value);
 }
-
-export type { ActionDescriptor, ProtocolPatch, ProtocolView as RemoteUIView };

@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createInspector,
-  fetchView,
   inspectView,
   mount,
   mountRemoteView,
 } from '../../src/index.js';
+import { fetchView } from '../../adapters/typescript/index';
 
 describe('runtime inspection', () => {
   beforeEach(() => {

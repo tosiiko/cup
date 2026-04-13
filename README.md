@@ -25,6 +25,27 @@ Less ideal:
 npm install @tosiiko/cup
 ```
 
+## Initialize A Project
+
+You can now scaffold a runnable CUP login app directly into the current directory or a new folder.
+
+```bash
+npx @tosiiko/cup init --adapter py-cup
+```
+
+```bash
+npx @tosiiko/cup init my-login --adapter ts-cup
+```
+
+Runnable `init` adapters today:
+
+- `py-cup`
+- `go-cup`
+- `node-cup`
+- `ts-cup`
+
+These scaffolds are meant to start like the repo demos do: they generate a real app shell, a real login flow, and the files needed to run immediately.
+
 ## What A CUP View Looks Like
 
 ```json
@@ -88,8 +109,7 @@ For most CUP apps, that thin browser shell is enough:
 
 ## What Ships In `@tosiiko/cup`
 
-- browser runtime helpers like `mountRemoteView()`, `fetchView()`, and `fetchViewStream()`
-- explicit transport injection for `fetchView()` and `fetchViewStream()` through `fetchImpl`
+- browser runtime helpers like `mountRemoteView()`
 - schema validation with `validateProtocolView()` and `validateProtocolPatch()`
 - policy validation with `validateViewPolicy()` and `STARTER_VIEW_POLICY`
 - inspection helpers with `createInspector()` and `inspectView()`
@@ -141,8 +161,8 @@ Good practice:
 Runtime defaults:
 
 - `{{ value }}` escapes by default
-- `fetchView()` validates incoming protocol views by default
-- remote network helpers require an explicit `fetchImpl` from the app
+- `mountRemoteView()` validates incoming protocol views by default
+- the TypeScript adapter's remote helpers require an explicit `fetchImpl` from the app
 - the runtime targets modern evergreen browsers
 
 Starter-grade backend defaults should include:
@@ -216,6 +236,12 @@ Start here:
 - richer authenticated shell: [python-crm](./starters/python-crm)
 - authenticated Node backend path: [node-dashboard](./starters/node-dashboard)
 
+For a fast local bootstrap instead of cloning a starter, use:
+
+```bash
+npx @tosiiko/cup init --adapter py-cup
+```
+
 ## Adapters
 
 - [Python adapter](./adapters/python)
@@ -225,7 +251,7 @@ Start here:
 
 Production adapters today are Python and Go.
 
-Node and TypeScript now also have alpha wrapper adapter paths, and Rust and Java have alpha source adapters in-repo. See [docs/adapters.md](./docs/adapters.md) for the current implementation level of each language path.
+Node and TypeScript now also have alpha adapter paths, and Rust and Java have alpha source adapters in-repo. The transport-aware remote helpers now live on the TypeScript adapter path instead of the core package so `@tosiiko/cup` stays focused on validation, mounting, and protocol utilities. See [docs/adapters.md](./docs/adapters.md) for the current implementation level of each language path.
 
 ## Docs
 
@@ -274,7 +300,7 @@ node starters/node-dashboard/server.mjs
 ## Status
 
 - protocol version: `1`
-- package version: `0.1.6`
+- package version: `0.2.0`
 - browser target: modern evergreen browsers
 - current focus: stable backend-first runtime, adapters, starters, and release tooling
 

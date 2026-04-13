@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Added a real `cup init` CLI for runnable login scaffolds in the current directory or a target folder.
+- Shipped first-class `init` support for `py-cup`, `go-cup`, `node-cup`, and `ts-cup`.
+- Added release smoke coverage so the packed npm tarball must ship the CLI and generate working starter files.
+
+## 0.2.0
+
+- Removed the transport-aware remote loading helpers from the core `@tosiiko/cup` bundle so the published package stays transport-free.
+- Moved `fetchView()` and `fetchViewStream()` onto the `ts-cup` adapter path while keeping `mountRemoteView()` in core for static protocol mounts.
+- Added a package-level release guard that fails `pack:check` if the core tarball regains remote transport markers or ships source maps.
+- Clarified the docs around the new package boundary, including TypeScript adapter ownership of remote loading helpers.
+- Made the Python login and dashboard demos accept port overrides and fail with clearer guidance when their default ports are already in use.
+
 ## 0.1.6
 
 - Synced adapter generators, adapter manifests, scaffold metadata, and release docs to the current package version, with regression tests that now catch version drift automatically.

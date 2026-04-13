@@ -25,6 +25,13 @@ Alpha adapter paths also exist in-repo for:
 - Rust
 - Java
 
+Runnable `cup init` project scaffolds today:
+
+- `py-cup`
+- `go-cup`
+- `node-cup`
+- `ts-cup`
+
 The remaining language folders are bootstrapped scaffolds for future implementation.
 
 ## Naming Rule
@@ -107,6 +114,7 @@ The registry deliberately separates project intent from implementation reality.
   implemented, production, stable, not yet separately published under the planned `*-cup` namespace
 - Node and TypeScript:
   implemented, wrapper, alpha, not yet separately published
+  TypeScript also owns the current in-repo transport-aware remote helpers so the core `@tosiiko/cup` package can stay transport-free.
 - Rust and Java:
   implemented, source, alpha, not yet separately published
 - remaining adapters:

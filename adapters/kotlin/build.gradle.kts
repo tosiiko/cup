@@ -3,4 +3,4 @@ plugins {
 }
 
 group = "dev.tosiiko.cup"
-version = "0.1.6"
+version = "0.2.0"

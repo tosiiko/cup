@@ -22,7 +22,7 @@ import (
 	"strings"
 )
 
-const adapterVersion = "cup-go/0.1.6"
+const adapterVersion = "cup-go/0.2.0"
 
 var (
 	scriptTagPattern     = regexp.MustCompile(`(?i)<script\b`)

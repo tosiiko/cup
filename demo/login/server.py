@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
@@ -11,8 +12,8 @@ sys.path.insert(0, str(ROOT / "adapters" / "python"))
 
 from cup import EmitAction, STARTER_VIEW_POLICY, UIView, validate_view_policy  # noqa: E402
 
-HOST = "127.0.0.1"
-PORT = 8010
+HOST = os.environ.get("CUP_LOGIN_HOST", "127.0.0.1")
+PORT = int(os.environ.get("CUP_LOGIN_PORT", "8010"))
 VALID_USERNAME = "demo"
 VALID_PASSWORD = "cup123"
 
@@ -226,7 +227,16 @@ def main() -> None:
     if not DIST_DIR.exists():
         raise SystemExit("dist/ not found. Run `npm run build` before starting the demo.")
 
-    server = HTTPServer((HOST, PORT), DemoHandler)
+    try:
+        server = HTTPServer((HOST, PORT), DemoHandler)
+    except OSError as error:
+        if error.errno == 48:
+            raise SystemExit(
+                f"Port {PORT} is already in use on {HOST}. Stop the existing process or run "
+                f"`CUP_LOGIN_PORT={PORT + 1} python server.py`.",
+            ) from error
+        raise
+
     print(f"CUP Python login demo -> http://{HOST}:{PORT}")
     server.serve_forever()
 

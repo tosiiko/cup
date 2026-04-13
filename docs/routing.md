@@ -35,7 +35,7 @@ Phase 1 now adds:
 
 - `validateProtocolPatch()`
 - `applyProtocolPatch()`
-- `fetchViewStream()`
+- transport-aware stream helpers on the TypeScript adapter path
 
 Use full views by default.
 
@@ -51,7 +51,7 @@ Use streaming when:
 - a queue/table loads in chunks
 - a workflow produces multiple server-side phases before settling
 
-When using `fetchViewStream()` or `fetchView()`, inject the transport from your app through `fetchImpl` rather than relying on an implicit global network client.
+When you use the TypeScript adapter's remote helpers, inject the transport from your app through `fetchImpl` rather than relying on an implicit global network client.
 
 Keep these guardrails:
 

@@ -1,4 +1,4 @@
-import { defineTypeScriptView, toTypeScriptResponse, tsFetch } from '../index.ts';
+import { defineTypeScriptView, toTypeScriptResponse, tsFetch } from '../index';
 
 let count = 0;
 

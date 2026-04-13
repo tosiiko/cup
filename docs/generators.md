@@ -1,6 +1,40 @@
 # CUP Generators
 
-Phase 1 now includes scaffold generators for the official Python and Go adapters.
+CUP now ships two generator layers:
+
+- `cup init`
+  for runnable project bootstraps
+- adapter-specific scaffold commands
+  for adding new pages and actions inside existing apps
+
+`cup init` is the fastest way to start development from an empty folder.
+
+## Project Init
+
+Use the package binary to scaffold a runnable login app into the current directory or a target directory:
+
+```bash
+npx @tosiiko/cup init --adapter py-cup
+npx @tosiiko/cup init my-node-login --adapter node-cup
+npx @tosiiko/cup init my-ts-login --adapter ts-cup
+npx @tosiiko/cup init my-go-login --adapter go-cup
+```
+
+Currently runnable `init` adapters:
+
+- `py-cup`
+- `go-cup`
+- `node-cup`
+- `ts-cup`
+
+What `cup init` writes:
+
+- a working login flow
+- the CUP browser runtime where needed
+- a small server or app shell you can run immediately
+- a README with the next commands
+
+The goal is “pick up and load,” not “blank starter with homework.”
 
 The generators follow one rule on purpose: they write safe starter files and snippet files, but they do not silently rewrite your existing route or action modules.
 

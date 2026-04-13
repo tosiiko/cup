@@ -12,6 +12,8 @@ TypeScript adapter path for CUP.
 - `tsFetch()`
 - `tsEmit()`
 - `tsNavigate()`
+- `fetchView()`
+- `fetchViewStream()`
 
 These helpers:
 
@@ -19,6 +21,7 @@ These helpers:
 - validate the protocol shape
 - optionally enforce `STARTER_VIEW_POLICY`
 - make server-side response assembly more uniform
+- keep the transport-aware remote loading helpers on the TypeScript side rather than in the core package
 
 ## Example
 

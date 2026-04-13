@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
@@ -40,6 +40,7 @@ try {
   const requiredFiles = [
     'LICENSE',
     'README.md',
+    'bin/cup.mjs',
     'docs/generators.md',
     'docs/reference-ui.md',
     'dist/index.js',
@@ -62,6 +63,17 @@ try {
   }
 
   const tarball = resolve(packDir, packResult.filename);
+  const packedBundle = execFileSync(
+    'tar',
+    ['-xOf', tarball, 'package/dist/index.js'],
+    { encoding: 'utf8' },
+  );
+
+  for (const marker of ['fetchView', 'fetchViewStream', 'globalThis["fetch"]', 'globalThis.fetch']) {
+    if (packedBundle.includes(marker)) {
+      throw new Error(`packed core bundle should stay transport-free, but found marker: ${marker}`);
+    }
+  }
 
   writeFileSync(resolve(smokeDir, 'package.json'), JSON.stringify({
     name: 'cup-smoke',
@@ -86,6 +98,35 @@ try {
     cwd: smokeDir,
     stdio: 'inherit',
   });
+
+  const cliBin = resolve(
+    smokeDir,
+    'node_modules',
+    '.bin',
+    process.platform === 'win32' ? 'cup.cmd' : 'cup',
+  );
+
+  const pyInitDir = resolve(smokeDir, 'py-init');
+  execFileSync(cliBin, ['init', pyInitDir, '--adapter', 'py-cup'], {
+    cwd: smokeDir,
+    stdio: 'inherit',
+  });
+  if (!existsSync(resolve(pyInitDir, 'server.py'))) {
+    throw new Error('packed cli should create a py-cup scaffold with server.py');
+  }
+  if (!existsSync(resolve(pyInitDir, 'cup', 'index.js'))) {
+    throw new Error('packed cli should vendor the runtime into py-cup scaffolds');
+  }
+
+  const tsInitDir = resolve(smokeDir, 'ts-init');
+  execFileSync(cliBin, ['init', tsInitDir, '--adapter', 'ts-cup'], {
+    cwd: smokeDir,
+    stdio: 'inherit',
+  });
+  const tsPackageJson = readFileSync(resolve(tsInitDir, 'package.json'), 'utf8');
+  if (!tsPackageJson.includes('"@tosiiko/cup"')) {
+    throw new Error('packed cli should create a ts-cup scaffold that depends on @tosiiko/cup');
+  }
 
   writeFileSync(resolve(smokeDir, 'index.ts'), [
     "import { validateProtocolView } from '@tosiiko/cup';",

@@ -9,8 +9,8 @@ DASHBOARD_DIR = APP_DIR.parent
 DEMO_DIR = DASHBOARD_DIR.parent
 REPO_ROOT = DEMO_DIR.parent
 
-HOST = "127.0.0.1"
-PORT = 8030
+HOST = os.environ.get("CUP_DASHBOARD2_HOST", "127.0.0.1")
+PORT = int(os.environ.get("CUP_DASHBOARD2_PORT", "8030"))
 APP_NAME = "CUP CRM Studio"
 
 SESSION_COOKIE = "cup_crm_session"

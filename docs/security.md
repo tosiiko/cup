@@ -5,8 +5,8 @@ Security is part of the architecture, not a later cleanup.
 ## Runtime Defaults
 
 - `{{ value }}` escapes HTML by default
-- `fetchView()` validates protocol views by default
-- remote helpers only use a caller-injected `fetchImpl`
+- `mountRemoteView()` validates protocol views by default
+- transport-aware remote helpers live outside the core package boundary
 - official starters validate outgoing views against `STARTER_VIEW_POLICY`
 
 ## Starter Checklist

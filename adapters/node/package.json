@@ -1,11 +1,11 @@
 {
   "name": "node-cup",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "type": "module",
   "private": true,
   "description": "CUP Node adapter alpha wrapper",
   "dependencies": {
-    "@tosiiko/cup": "^0.1.6"
+    "@tosiiko/cup": "^0.2.0"
   },
   "exports": {
     ".": "./index.mjs"

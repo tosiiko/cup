@@ -1,6 +1,6 @@
 Gem::Specification.new do |spec|
   spec.name = "rb-cup"
-  spec.version = "0.1.6"
+  spec.version = "0.2.0"
   spec.summary = "CUP Ruby adapter scaffold"
   spec.files = Dir["lib/**/*.rb"]
   spec.require_paths = ["lib"]

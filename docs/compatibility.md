@@ -1,6 +1,6 @@
 # CUP Compatibility And Deprecation Policy
 
-This document defines the stability rules for CUP from `0.1.6` onward.
+This document defines the stability rules for CUP from `0.2.0` onward.
 
 ## Stability Scope
 

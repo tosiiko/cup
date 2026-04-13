@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-ADAPTER_VERSION = "cup-python/0.1.6"
+ADAPTER_VERSION = "cup-python/0.2.0"
 SUPPORTED_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
 SCRIPT_TAG_PATTERN = re.compile(r"<script\b", re.IGNORECASE)
 INLINE_HANDLER_PATTERN = re.compile(r"\son[a-z][a-z0-9_-]*\s*=", re.IGNORECASE)

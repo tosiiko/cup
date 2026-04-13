@@ -9,7 +9,7 @@ For Node today, the published package is still `@tosiiko/cup`, and the in-repo `
 - `ProtocolView` and protocol validation
 - `validateViewPolicy(..., STARTER_VIEW_POLICY)`
 - patch and stream helpers
-- the browser runtime for mounting and remounting views
+- the core browser runtime for mounting and remounting views
 - the in-repo `node-cup` alpha wrapper surface
 - official Node starter coverage through `starters/node-dashboard`
 

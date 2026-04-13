@@ -17,7 +17,7 @@ import {
   tsEmit,
   tsFetch,
   tsNavigate,
-} from '../../adapters/typescript/index.ts';
+} from '../../adapters/typescript/index';
 
 describe('adapter packages', () => {
   it('defines node-cup views with adapter metadata and response helpers', () => {
