@@ -1,4 +1,5 @@
 import {
+  CUP_PROVENANCE_EXTENSION,
   STARTER_VIEW_POLICY,
   validateProtocolView,
   validateViewPolicy,
@@ -7,7 +8,7 @@ import {
 export * from '../../dist/index.js';
 
 export const ADAPTER_NAME = 'node-cup';
-export const ADAPTER_GENERATOR = 'node-cup/0.2.4';
+export const ADAPTER_GENERATOR = 'node-cup/0.3.0';
 export const ADAPTER_LANG = 'node';
 
 export function nodeFetch(url, options = {}) {
@@ -43,14 +44,36 @@ export function nodeNavigate(url, options = {}) {
 }
 
 export function withNodeMeta(view, meta = {}) {
+  const existingMeta = view.meta ?? {};
+  const existingProvenance = existingMeta.provenance ?? {};
   return {
     ...view,
     meta: {
       version: '1',
       lang: ADAPTER_LANG,
       generator: ADAPTER_GENERATOR,
-      ...(view.meta ?? {}),
+      ...existingMeta,
       ...meta,
+      provenance: {
+        source: 'adapter',
+        generatedBy: ADAPTER_GENERATOR,
+        generatedAt: existingProvenance.generatedAt ?? new Date().toISOString(),
+        ...existingProvenance,
+        ...(meta.provenance ?? {}),
+        validation: {
+          schema: 'valid',
+          policy: 'skipped',
+          validator: ADAPTER_GENERATOR,
+          checkedAt: new Date().toISOString(),
+          ...(existingProvenance.validation ?? {}),
+          ...(meta.provenance?.validation ?? {}),
+        },
+      },
+      extensions: {
+        [CUP_PROVENANCE_EXTENSION]: { version: '1' },
+        ...(existingMeta.extensions ?? {}),
+        ...(meta.extensions ?? {}),
+      },
     },
   };
 }
@@ -60,10 +83,37 @@ export function defineNodeView(view, options = {}) {
   if (!options.policy) {
     return normalized;
   }
-  return validateViewPolicy(
+  const withPolicy = validateViewPolicy(
     normalized,
     options.policy === true ? STARTER_VIEW_POLICY : options.policy,
   );
+  return {
+    ...withPolicy,
+    meta: {
+      ...(withPolicy.meta ?? {}),
+      provenance: {
+        ...(withPolicy.meta?.provenance ?? {}),
+        validation: {
+          ...(withPolicy.meta?.provenance?.validation ?? {}),
+          schema: 'valid',
+          policy: 'passed',
+          validator: ADAPTER_GENERATOR,
+          checkedAt: new Date().toISOString(),
+        },
+        policyDecisions: [
+          ...(withPolicy.meta?.provenance?.policyDecisions ?? []),
+          {
+            policy: options.policy === true ? 'starter-view-policy' : 'custom-view-policy',
+            outcome: 'allow',
+          },
+        ],
+      },
+      extensions: {
+        [CUP_PROVENANCE_EXTENSION]: { version: '1' },
+        ...(withPolicy.meta?.extensions ?? {}),
+      },
+    },
+  };
 }
 
 export function toNodeResponse(view, options = {}) {

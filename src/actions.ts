@@ -32,6 +32,7 @@
 import { mount } from './mount.js';
 import { cleanupTree } from './cleanup.js';
 import { createSignal } from './signal.js';
+import { emitRuntimeTrace, type TraceListener } from './tracing.js';
 import type { ClientView, Signal } from './types.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -93,6 +94,10 @@ export interface Dispatcher {
   error: Signal<Error | null>;
 }
 
+export interface DispatcherOptions {
+  onTrace?: TraceListener;
+}
+
 // ── Built-in middleware factories ─────────────────────────────────────────────
 
 /** Logs every action to the console with timing. */
@@ -152,7 +157,7 @@ export function delayMiddleware(ms: number): Middleware {
 
 // ── createDispatcher ──────────────────────────────────────────────────────────
 
-export function createDispatcher(container: Element, view: ClientView): Dispatcher {
+export function createDispatcher(container: Element, view: ClientView, options: DispatcherOptions = {}): Dispatcher {
   const middlewares: Middleware[] = [];
   const registry = new Map<string, ActionRegistration>();
   const queues   = new Map<string, Array<() => void>>();
@@ -216,7 +221,7 @@ export function createDispatcher(container: Element, view: ClientView): Dispatch
       state: liveState,
       actions: buildLocalActions(),
     };
-    mount(container, localView);
+    mount(container, localView, { traceActions: false });
   }
 
   function buildLocalActions(): ClientView['actions'] {
@@ -252,6 +257,7 @@ export function createDispatcher(container: Element, view: ClientView): Dispatch
     syncLoadingSignals();
     const snapshot = { ...liveState };
     const optimisticState = applyOptimistic(registration, payload);
+    const startedAt = now();
 
     const ctx: ActionContext = {
       name,
@@ -263,6 +269,18 @@ export function createDispatcher(container: Element, view: ClientView): Dispatch
       isAborted: () => false,
     };
 
+    emitRuntimeTrace({
+      kind: 'action',
+      at: new Date().toISOString(),
+      source: 'dispatcher',
+      phase: 'start',
+      name,
+      actionType: 'client',
+    }, {
+      container,
+      listener: options.onTrace,
+    });
+
     try {
       await runPipeline(ctx, registration);
       if (destroyed) return;
@@ -271,8 +289,46 @@ export function createDispatcher(container: Element, view: ClientView): Dispatch
         liveState = { ...liveState, ...ctx.state };
       }
       remount();
+      emitRuntimeTrace({
+        kind: 'action',
+        at: new Date().toISOString(),
+        source: 'dispatcher',
+        phase: 'success',
+        name,
+        actionType: 'client',
+        durationMs: now() - startedAt,
+      }, {
+        container,
+        listener: options.onTrace,
+      });
     } catch (err) {
-      if (optimisticState && !destroyed) rollback(snapshot);
+      emitRuntimeTrace({
+        kind: 'action',
+        at: new Date().toISOString(),
+        source: 'dispatcher',
+        phase: 'error',
+        name,
+        actionType: 'client',
+        durationMs: now() - startedAt,
+        error: err instanceof Error ? err.message : String(err),
+      }, {
+        container,
+        listener: options.onTrace,
+      });
+      if (optimisticState && !destroyed) {
+        rollback(snapshot);
+        emitRuntimeTrace({
+          kind: 'action',
+          at: new Date().toISOString(),
+          source: 'dispatcher',
+          phase: 'rollback',
+          name,
+          actionType: 'client',
+        }, {
+          container,
+          listener: options.onTrace,
+        });
+      }
       throw err;
     } finally {
       running.delete(name);
@@ -347,4 +403,8 @@ export function createDispatcher(container: Element, view: ClientView): Dispatch
   };
 
   return dispatcher;
+}
+
+function now(): number {
+  return typeof performance !== 'undefined' ? performance.now() : Date.now();
 }

@@ -1,6 +1,6 @@
 cabal-version: 2.4
 name: hs-cup
-version: 0.2.4
+version: 0.3.0
 library
   exposed-modules: CUP
   hs-source-dirs: src

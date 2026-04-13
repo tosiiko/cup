@@ -92,7 +92,66 @@
         "lang":      { "type": "string", "description": "Backend language that produced this view, e.g. 'python', 'go', 'rust'." },
         "generator": { "type": "string", "description": "Adapter name + version, e.g. 'cup-python/0.1.0'." },
         "title":     { "type": "string", "description": "Human-readable view title for devtools." },
-        "route":     { "type": "string", "description": "The server route that produced this view." }
+        "route":     { "type": "string", "description": "The server route that produced this view." },
+        "provenance": { "$ref": "#/$defs/Provenance" },
+        "extensions": {
+          "type": "object",
+          "description": "Optional additive protocol extensions declared by this view.",
+          "additionalProperties": { "$ref": "#/$defs/ExtensionDescriptor" }
+        }
+      }
+    },
+
+    "Provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string", "enum": ["human", "ai", "adapter", "hybrid"] },
+        "generatedBy": { "type": "string" },
+        "generatedAt": { "type": "string" },
+        "requestId": { "type": "string" },
+        "validation": { "$ref": "#/$defs/ValidationProvenance" },
+        "policyDecisions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/PolicyDecision" }
+        }
+      }
+    },
+
+    "ValidationProvenance": {
+      "type": "object",
+      "required": ["schema"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "type": "string", "enum": ["valid", "repaired", "unchecked"] },
+        "policy": { "type": "string", "enum": ["passed", "failed", "skipped"] },
+        "validator": { "type": "string" },
+        "checkedAt": { "type": "string" }
+      }
+    },
+
+    "PolicyDecision": {
+      "type": "object",
+      "required": ["policy", "outcome"],
+      "additionalProperties": false,
+      "properties": {
+        "policy": { "type": "string" },
+        "outcome": { "type": "string", "enum": ["allow", "deny", "skip"] },
+        "detail": { "type": "string" }
+      }
+    },
+
+    "ExtensionDescriptor": {
+      "type": "object",
+      "required": ["version"],
+      "additionalProperties": false,
+      "properties": {
+        "version": { "type": "string" },
+        "required": { "type": "boolean" },
+        "config": {
+          "type": "object",
+          "additionalProperties": true
+        }
       }
     }
   }

@@ -102,6 +102,10 @@ The practical model is simple:
 - views assemble state and choose templates
 - the browser mounts protocol views and posts actions back
 
+Official adapters may also attach optional `meta.provenance` and `meta.extensions`
+fields so views can describe where they came from and which additive protocol
+features they rely on.
+
 ## Quick Start
 
 ```ts
@@ -139,6 +143,8 @@ For most CUP apps, that thin browser shell is enough:
 - schema validation with `validateProtocolView()` and `validateProtocolPatch()`
 - policy validation with `validateViewPolicy()` and `STARTER_VIEW_POLICY`
 - inspection helpers with `createInspector()` and `inspectView()`
+- capability negotiation helpers with `createCapabilityHeaders()` and `negotiateCapabilities()`
+- trace hooks with `createTraceObserver()` and `inspectTraces()`
 - patch helpers with `applyProtocolPatch()` and `isProtocolPatch()`
 - repair helpers for generated or malformed inputs
 - offline draft/retry helpers for server-authoritative patterns
@@ -325,7 +331,7 @@ node starters/node-dashboard/server.mjs
 ## Status
 
 - protocol version: `1`
-- package version: `0.2.4`
+- package version: `0.3.0`
 - browser target: modern evergreen browsers
 - current focus: stable backend-first runtime, adapters, starters, and release tooling
 

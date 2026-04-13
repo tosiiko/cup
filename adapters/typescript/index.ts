@@ -1,4 +1,5 @@
 import {
+  CUP_PROVENANCE_EXTENSION,
   STARTER_VIEW_POLICY,
   validateProtocolView,
   validateViewPolicy,
@@ -17,7 +18,7 @@ export type { FetchViewOptions, FetchViewStreamOptions, RemoteMount, RemoteStrea
 export { fetchView, fetchViewStream } from './remote';
 
 export const ADAPTER_NAME = 'ts-cup';
-export const ADAPTER_GENERATOR = 'ts-cup/0.2.4';
+export const ADAPTER_GENERATOR = 'ts-cup/0.3.0';
 export const ADAPTER_LANG = 'ts';
 
 export interface TypeScriptAdapterOptions {
@@ -68,15 +69,39 @@ export function withTypeScriptMeta(
   view: ProtocolView,
   meta: Partial<ProtocolView['meta']> = {},
 ): ProtocolView {
+  const existingMeta = view.meta ?? {};
+  const existingProvenance = existingMeta.provenance ?? {};
+  const mergedMeta = {
+    version: '1' as const,
+    lang: ADAPTER_LANG,
+    generator: ADAPTER_GENERATOR,
+    ...existingMeta,
+    ...meta,
+    provenance: {
+      source: 'adapter' as const,
+      generatedBy: ADAPTER_GENERATOR,
+      generatedAt: existingProvenance.generatedAt ?? new Date().toISOString(),
+      ...existingProvenance,
+      ...(meta.provenance ?? {}),
+      validation: {
+        schema: 'valid' as const,
+        policy: 'skipped' as const,
+        validator: ADAPTER_GENERATOR,
+        checkedAt: new Date().toISOString(),
+        ...(existingProvenance.validation ?? {}),
+        ...(meta.provenance?.validation ?? {}),
+      },
+    },
+    extensions: {
+      [CUP_PROVENANCE_EXTENSION]: { version: '1' },
+      ...(existingMeta.extensions ?? {}),
+      ...(meta.extensions ?? {}),
+    },
+  };
+
   return {
     ...view,
-    meta: {
-      version: '1',
-      lang: ADAPTER_LANG,
-      generator: ADAPTER_GENERATOR,
-      ...(view.meta ?? {}),
-      ...meta,
-    },
+    meta: mergedMeta,
   };
 }
 
@@ -88,10 +113,37 @@ export function defineTypeScriptView(
   if (!options.policy) {
     return normalized;
   }
-  return validateViewPolicy(
+  const withPolicy = validateViewPolicy(
     normalized,
     options.policy === true ? STARTER_VIEW_POLICY : options.policy,
   );
+  return {
+    ...withPolicy,
+    meta: {
+      ...(withPolicy.meta ?? {}),
+      provenance: {
+        ...(withPolicy.meta?.provenance ?? {}),
+        validation: {
+          ...(withPolicy.meta?.provenance?.validation ?? {}),
+          schema: 'valid',
+          policy: 'passed',
+          validator: ADAPTER_GENERATOR,
+          checkedAt: new Date().toISOString(),
+        },
+        policyDecisions: [
+          ...(withPolicy.meta?.provenance?.policyDecisions ?? []),
+          {
+            policy: options.policy === true ? 'starter-view-policy' : 'custom-view-policy',
+            outcome: 'allow',
+          },
+        ],
+      },
+      extensions: {
+        [CUP_PROVENANCE_EXTENSION]: { version: '1' },
+        ...(withPolicy.meta?.extensions ?? {}),
+      },
+    },
+  };
 }
 
 export function toTypeScriptResponse(

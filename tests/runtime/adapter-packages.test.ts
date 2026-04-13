@@ -35,13 +35,26 @@ describe('adapter packages', () => {
       },
     }, { policy: true });
 
-    expect(view.meta).toEqual({
+    expect(view.meta).toMatchObject({
       version: '1',
       lang: NODE_ADAPTER_LANG,
       generator: NODE_ADAPTER_GENERATOR,
       title: 'Node Fixture',
       route: '/fixture/node',
+      provenance: {
+        source: 'adapter',
+        generatedBy: NODE_ADAPTER_GENERATOR,
+        validation: {
+          schema: 'valid',
+          policy: 'passed',
+        },
+      },
+      extensions: {
+        'cup.provenance': { version: '1' },
+      },
     });
+    expect(view.meta?.provenance?.generatedAt).toEqual(expect.any(String));
+    expect(view.meta?.provenance?.validation?.checkedAt).toEqual(expect.any(String));
     expect(view.actions).toEqual({
       reload: { type: 'fetch', url: '/api/reload', method: 'GET', payload: { scope: 'all' } },
       notify: { type: 'emit', event: 'reload:start', detail: { source: 'test' } },
@@ -76,13 +89,26 @@ describe('adapter packages', () => {
       },
     }, { policy: true });
 
-    expect(view.meta).toEqual({
+    expect(view.meta).toMatchObject({
       version: '1',
       lang: TS_ADAPTER_LANG,
       generator: TS_ADAPTER_GENERATOR,
       title: 'TypeScript Fixture',
       route: '/fixture/ts',
+      provenance: {
+        source: 'adapter',
+        generatedBy: TS_ADAPTER_GENERATOR,
+        validation: {
+          schema: 'valid',
+          policy: 'passed',
+        },
+      },
+      extensions: {
+        'cup.provenance': { version: '1' },
+      },
     });
+    expect(view.meta?.provenance?.generatedAt).toEqual(expect.any(String));
+    expect(view.meta?.provenance?.validation?.checkedAt).toEqual(expect.any(String));
     expect(view.actions).toEqual({
       reload: { type: 'fetch', url: '/api/reload', method: 'PATCH', payload: { scope: 'team' } },
       notify: { type: 'emit', event: 'reload:start', detail: { source: 'test' } },

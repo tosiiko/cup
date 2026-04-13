@@ -7,7 +7,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-ADAPTER_VERSION = "cup-python/0.2.4"
+ADAPTER_VERSION = "cup-python/0.3.0"
+PROVENANCE_EXTENSION = "cup.provenance"
 SUPPORTED_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
 SCRIPT_TAG_PATTERN = re.compile(r"<script\b", re.IGNORECASE)
 INLINE_HANDLER_PATTERN = re.compile(r"\son[a-z][a-z0-9_-]*\s*=", re.IGNORECASE)
@@ -152,6 +153,20 @@ class UIView:
             meta["title"] = self._title
         if self._route:
             meta["route"] = self._route
+        meta["provenance"] = {
+            "source": "adapter",
+            "generatedBy": ADAPTER_VERSION,
+            "generatedAt": _iso_now(),
+            "validation": {
+                "schema": "valid",
+                "policy": "skipped",
+                "validator": ADAPTER_VERSION,
+                "checkedAt": _iso_now(),
+            },
+        }
+        meta["extensions"] = {
+            PROVENANCE_EXTENSION: {"version": "1"},
+        }
         out["meta"] = meta
 
         validate_view(out)
@@ -198,6 +213,20 @@ def validate_view(view: UIView | dict[str, Any]) -> dict[str, Any]:
                 "generator": ADAPTER_VERSION,
                 **({"title": view._title} if view._title else {}),
                 **({"route": view._route} if view._route else {}),
+                "provenance": {
+                    "source": "adapter",
+                    "generatedBy": ADAPTER_VERSION,
+                    "generatedAt": _iso_now(),
+                    "validation": {
+                        "schema": "valid",
+                        "policy": "skipped",
+                        "validator": ADAPTER_VERSION,
+                        "checkedAt": _iso_now(),
+                    },
+                },
+                "extensions": {
+                    PROVENANCE_EXTENSION: {"version": "1"},
+                },
             },
         }
         if not payload["actions"]:
@@ -209,6 +238,7 @@ def validate_view(view: UIView | dict[str, Any]) -> dict[str, Any]:
     _validate_payload(_normalise(payload), "view", issues)
     if issues:
         raise ValidationError(issues)
+    _annotate_schema_provenance(payload)
     return payload
 
 
@@ -219,6 +249,7 @@ def validate_view_policy(view: UIView | dict[str, Any], policy: ViewPolicy | Non
     _validate_policy_payload(payload, "view", effective, issues)
     if issues:
         raise PolicyError(issues)
+    _annotate_policy_provenance(payload, "starter-view-policy" if policy is STARTER_VIEW_POLICY else "custom-view-policy")
     return payload
 
 
@@ -308,7 +339,7 @@ def _validate_meta(value: Any, path: str, issues: list[str]) -> None:
         issues.append(f"{path} must be an object")
         return
 
-    _validate_allowed_keys(value, {"version", "lang", "generator", "title", "route"}, path, issues)
+    _validate_allowed_keys(value, {"version", "lang", "generator", "title", "route", "provenance", "extensions"}, path, issues)
 
     if "version" in value and value["version"] != "1":
         issues.append(f"{path}.version must be '1'")
@@ -316,6 +347,18 @@ def _validate_meta(value: Any, path: str, issues: list[str]) -> None:
     for key in ("lang", "generator", "title", "route"):
         if key in value and not isinstance(value[key], str):
             issues.append(f"{path}.{key} must be a string")
+
+    provenance = value.get("provenance")
+    if provenance is not None:
+        _validate_provenance(provenance, f"{path}.provenance", issues)
+
+    extensions = value.get("extensions")
+    if extensions is not None:
+        if not isinstance(extensions, dict):
+            issues.append(f"{path}.extensions must be an object")
+        else:
+            for name, descriptor in extensions.items():
+                _validate_extension_descriptor(descriptor, f"{path}.extensions.{name}", issues)
 
 
 def _validate_json_object(value: dict[str, Any], path: str, issues: list[str]) -> None:
@@ -341,6 +384,82 @@ def _validate_allowed_keys(value: dict[str, Any], allowed: set[str], path: str, 
     for key in value:
         if key not in allowed:
             issues.append(f"{path} contains unsupported property '{key}'")
+
+
+def _validate_provenance(value: Any, path: str, issues: list[str]) -> None:
+    if not isinstance(value, dict):
+        issues.append(f"{path} must be an object")
+        return
+
+    _validate_allowed_keys(value, {"source", "generatedBy", "generatedAt", "requestId", "validation", "policyDecisions"}, path, issues)
+
+    if "source" in value and value["source"] not in {"human", "ai", "adapter", "hybrid"}:
+        issues.append(f"{path}.source must be one of human, ai, adapter, hybrid")
+    for key in ("generatedBy", "generatedAt", "requestId"):
+        if key in value and not isinstance(value[key], str):
+            issues.append(f"{path}.{key} must be a string")
+
+    validation = value.get("validation")
+    if validation is not None:
+        _validate_validation_provenance(validation, f"{path}.validation", issues)
+
+    policy_decisions = value.get("policyDecisions")
+    if policy_decisions is not None:
+        if not isinstance(policy_decisions, list):
+            issues.append(f"{path}.policyDecisions must be an array")
+        else:
+            for index, decision in enumerate(policy_decisions):
+                _validate_policy_decision(decision, f"{path}.policyDecisions[{index}]", issues)
+
+
+def _validate_validation_provenance(value: Any, path: str, issues: list[str]) -> None:
+    if not isinstance(value, dict):
+        issues.append(f"{path} must be an object")
+        return
+
+    _validate_allowed_keys(value, {"schema", "policy", "validator", "checkedAt"}, path, issues)
+
+    if value.get("schema") not in {"valid", "repaired", "unchecked"}:
+        issues.append(f"{path}.schema must be one of valid, repaired, unchecked")
+    if "policy" in value and value["policy"] not in {"passed", "failed", "skipped"}:
+        issues.append(f"{path}.policy must be one of passed, failed, skipped")
+    for key in ("validator", "checkedAt"):
+        if key in value and not isinstance(value[key], str):
+            issues.append(f"{path}.{key} must be a string")
+
+
+def _validate_policy_decision(value: Any, path: str, issues: list[str]) -> None:
+    if not isinstance(value, dict):
+        issues.append(f"{path} must be an object")
+        return
+
+    _validate_allowed_keys(value, {"policy", "outcome", "detail"}, path, issues)
+
+    if not isinstance(value.get("policy"), str):
+        issues.append(f"{path}.policy must be a string")
+    if value.get("outcome") not in {"allow", "deny", "skip"}:
+        issues.append(f"{path}.outcome must be one of allow, deny, skip")
+    if "detail" in value and not isinstance(value["detail"], str):
+        issues.append(f"{path}.detail must be a string")
+
+
+def _validate_extension_descriptor(value: Any, path: str, issues: list[str]) -> None:
+    if not isinstance(value, dict):
+        issues.append(f"{path} must be an object")
+        return
+
+    _validate_allowed_keys(value, {"version", "required", "config"}, path, issues)
+
+    if not isinstance(value.get("version"), str):
+        issues.append(f"{path}.version must be a string")
+    if "required" in value and not isinstance(value["required"], bool):
+        issues.append(f"{path}.required must be a boolean")
+    config = value.get("config")
+    if config is not None:
+        if not isinstance(config, dict):
+            issues.append(f"{path}.config must be an object")
+        else:
+            _validate_json_object(config, f"{path}.config", issues)
 
 
 def _validate_policy_payload(value: dict[str, Any], path: str, policy: ViewPolicy, issues: list[str]) -> None:
@@ -376,3 +495,52 @@ def _validate_policy_action(value: Any, path: str, issues: list[str]) -> None:
     url = value.get("url")
     if not isinstance(url, str) or not RELATIVE_URL_PATTERN.match(url):
         issues.append(f"{path}.url must stay relative under the current policy")
+
+
+def _annotate_schema_provenance(payload: dict[str, Any]) -> None:
+    meta = payload.setdefault("meta", {})
+    if not isinstance(meta, dict):
+        return
+
+    provenance = meta.setdefault("provenance", {})
+    if not isinstance(provenance, dict):
+        return
+
+    provenance.setdefault("source", "adapter")
+    provenance.setdefault("generatedBy", meta.get("generator"))
+    provenance.setdefault("generatedAt", _iso_now())
+    validation = provenance.setdefault("validation", {})
+    if isinstance(validation, dict):
+        validation["schema"] = "valid"
+        validation["policy"] = validation.get("policy", "skipped")
+        validation["validator"] = validation.get("validator", meta.get("generator", ADAPTER_VERSION))
+        validation["checkedAt"] = _iso_now()
+
+    extensions = meta.setdefault("extensions", {})
+    if isinstance(extensions, dict):
+        extensions.setdefault(PROVENANCE_EXTENSION, {"version": "1"})
+
+
+def _annotate_policy_provenance(payload: dict[str, Any], policy_name: str) -> None:
+    meta = payload.get("meta")
+    if not isinstance(meta, dict):
+        return
+
+    provenance = meta.setdefault("provenance", {})
+    if not isinstance(provenance, dict):
+        return
+
+    validation = provenance.setdefault("validation", {})
+    if isinstance(validation, dict):
+        validation["policy"] = "passed"
+        validation["checkedAt"] = _iso_now()
+
+    decisions = provenance.setdefault("policyDecisions", [])
+    if isinstance(decisions, list):
+        decisions.append({"policy": policy_name, "outcome": "allow"})
+
+
+def _iso_now() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).isoformat()

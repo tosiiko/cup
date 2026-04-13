@@ -43,11 +43,28 @@ describe('AI fixtures', () => {
     expect(repaired.actions).toEqual({
       save: { type: 'fetch', url: '/save', method: 'POST' },
     });
-    expect(repaired.meta).toEqual({
+    expect(repaired.meta).toMatchObject({
       version: '1',
       lang: 'ai',
       title: 'Recovered AI view',
       route: '/recovered',
+      provenance: {
+        validation: {
+          schema: 'repaired',
+          policy: 'passed',
+          validator: 'repairProtocolViewCandidate',
+        },
+        policyDecisions: [
+          {
+            policy: 'view-policy',
+            outcome: 'allow',
+          },
+        ],
+      },
+      extensions: {
+        'cup.provenance': { version: '1' },
+      },
     });
+    expect(repaired.meta?.provenance?.validation?.checkedAt).toEqual(expect.any(String));
   });
 });

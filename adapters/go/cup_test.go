@@ -65,8 +65,14 @@ func TestMarshalJSONIncludesMeta(t *testing.T) {
 		t.Fatalf("marshal failed: %v", err)
 	}
 
-	if !strings.Contains(string(encoded), `"generator":"cup-go/0.2.4"`) {
+	if !strings.Contains(string(encoded), `"generator":"cup-go/0.3.0"`) {
 		t.Fatalf("expected generator metadata, got %s", string(encoded))
+	}
+	if !strings.Contains(string(encoded), `"cup.provenance":{"version":"1"}`) {
+		t.Fatalf("expected provenance extension metadata, got %s", string(encoded))
+	}
+	if !strings.Contains(string(encoded), `"source":"adapter"`) {
+		t.Fatalf("expected provenance source metadata, got %s", string(encoded))
 	}
 }
 

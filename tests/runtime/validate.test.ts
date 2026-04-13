@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  DEFAULT_RUNTIME_CAPABILITIES,
   ValidationError,
   validateProtocolPatch,
   validateProtocolView,
@@ -31,6 +32,51 @@ describe('validateProtocolView', () => {
         go: { type: 'navigate', url: '/next', payload: { draft: true } },
       },
     })).toThrow('unsupported property');
+  });
+
+  it('accepts provenance metadata and supported extensions', () => {
+    const view = validateProtocolView({
+      template: '<p>{{ title }}</p>',
+      state: { title: 'Traceable' },
+      meta: {
+        version: '1',
+        title: 'Traceable',
+        route: '/traceable',
+        provenance: {
+          source: 'ai',
+          generatedBy: 'generator/v1',
+          validation: {
+            schema: 'valid',
+            policy: 'passed',
+          },
+          policyDecisions: [
+            { policy: 'starter-view-policy', outcome: 'allow' },
+          ],
+        },
+        extensions: {
+          'cup.provenance': { version: '1', required: true },
+        },
+      },
+    }, {
+      capabilities: DEFAULT_RUNTIME_CAPABILITIES,
+    });
+
+    expect(view.meta?.extensions?.['cup.provenance']).toEqual({ version: '1', required: true });
+  });
+
+  it('rejects required unsupported extensions when capabilities are checked', () => {
+    expect(() => validateProtocolView({
+      template: '<p>Unsupported</p>',
+      state: {},
+      meta: {
+        version: '1',
+        extensions: {
+          'acme.analytics': { version: '9', required: true },
+        },
+      },
+    }, {
+      capabilities: DEFAULT_RUNTIME_CAPABILITIES,
+    })).toThrow('requires unsupported extension');
   });
 });
 

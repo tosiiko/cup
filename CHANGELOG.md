@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.3.0
+
+- Added additive `v1` protocol metadata for `meta.provenance` and `meta.extensions`, with matching schema and validator support across the TypeScript runtime plus the Python and Go adapters.
+- Added capability negotiation helpers and remote/runtime validation checks so clients can advertise supported protocol versions/extensions and reject unsupported required extensions before mount.
+- Added runtime observability hooks for render, action, and validation traces, including inspector-visible trace snapshots and tracing through dispatcher, static remote mounts, remote fetches, patches, and streams.
+- Added official adapter conformance and negotiation coverage, plus AI repair provenance coverage, so the release gate now checks provenance metadata, negotiated extensions, and trace behavior end-to-end.
+- Synced the public package, adapter wrappers, manifests, docs, and contract fixtures to version `0.3.0`.
+
 ## 0.2.4
 
 - Re-licensed the repository for future releases under Apache-2.0 while preserving the note that already-published npm releases through `0.2.3` remain MIT.

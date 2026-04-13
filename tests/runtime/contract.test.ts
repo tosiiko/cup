@@ -46,13 +46,25 @@ describe('cross-language protocol contracts', () => {
 
     mountRemoteView(view, container);
     expect(container.textContent).toContain('Hello from Python');
-    expect(view.meta).toEqual({
+    expect(view.meta).toMatchObject({
       version: '1',
       lang: 'python',
-      generator: 'cup-python/0.2.4',
+      generator: 'cup-python/0.3.0',
       title: 'Fixture',
       route: '/fixture',
+      provenance: {
+        source: 'adapter',
+        generatedBy: 'cup-python/0.3.0',
+        validation: {
+          schema: 'valid',
+        },
+      },
+      extensions: {
+        'cup.provenance': { version: '1' },
+      },
     });
+    expect(view.meta?.provenance?.generatedAt).toEqual(expect.any(String));
+    expect(view.meta?.provenance?.validation?.checkedAt).toEqual(expect.any(String));
 
     container.querySelector('button')?.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
     expect(location.pathname).toBe('/next');
@@ -64,13 +76,25 @@ describe('cross-language protocol contracts', () => {
 
     mountRemoteView(view, container);
     expect(container.textContent).toContain('Hello from Go');
-    expect(view.meta).toEqual({
+    expect(view.meta).toMatchObject({
       version: '1',
       lang: 'go',
-      generator: 'cup-go/0.2.4',
+      generator: 'cup-go/0.3.0',
       title: 'Fixture',
       route: '/fixture',
+      provenance: {
+        source: 'adapter',
+        generatedBy: 'cup-go/0.3.0',
+        validation: {
+          schema: 'valid',
+        },
+      },
+      extensions: {
+        'cup.provenance': { version: '1' },
+      },
     });
+    expect(view.meta?.provenance?.generatedAt).toEqual(expect.any(String));
+    expect(view.meta?.provenance?.validation?.checkedAt).toEqual(expect.any(String));
 
     container.querySelector('button')?.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
     expect(location.pathname).toBe('/next');
@@ -82,13 +106,25 @@ describe('cross-language protocol contracts', () => {
 
     mountRemoteView(view, container);
     expect(container.textContent).toContain('Hello from Node');
-    expect(view.meta).toEqual({
+    expect(view.meta).toMatchObject({
       version: '1',
       lang: 'node',
-      generator: 'node-cup/0.2.4',
+      generator: 'node-cup/0.3.0',
       title: 'Fixture',
       route: '/fixture',
+      provenance: {
+        source: 'adapter',
+        generatedBy: 'node-cup/0.3.0',
+        validation: {
+          schema: 'valid',
+        },
+      },
+      extensions: {
+        'cup.provenance': { version: '1' },
+      },
     });
+    expect(view.meta?.provenance?.generatedAt).toEqual(expect.any(String));
+    expect(view.meta?.provenance?.validation?.checkedAt).toEqual(expect.any(String));
 
     container.querySelector('button')?.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
     expect(location.pathname).toBe('/next');

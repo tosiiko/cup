@@ -5,6 +5,13 @@ import {
   recordInspectionError,
   recordProtocolMount,
 } from '../../src/inspect.js';
+import {
+  createCapabilityHeaders,
+  DEFAULT_RUNTIME_CAPABILITIES,
+  negotiateCapabilities,
+  type CapabilitySupport,
+  type NegotiationResult,
+} from '../../src/negotiation.js';
 import { applyProtocolPatch, isProtocolPatch } from '../../src/patch.js';
 import type {
   HTTPMethod,
@@ -12,6 +19,11 @@ import type {
   ProtocolPatch,
   ProtocolView,
 } from '../../src/protocol.js';
+import {
+  emitRuntimeTrace,
+  type TraceListener,
+  type ValidationTraceContext,
+} from '../../src/tracing.js';
 import type { ClientView } from '../../src/types.js';
 import { validateProtocolPatch, validateProtocolView } from '../../src/validate.js';
 
@@ -32,6 +44,9 @@ export interface FetchViewOptions {
   validate?: boolean;
   fetchImpl?: typeof fetch;
   onError?: (error: Error, context: { url: string; method: HTTPMethod }) => void;
+  capabilities?: CapabilitySupport;
+  onNegotiated?: (result: NegotiationResult) => void;
+  onTrace?: TraceListener;
 }
 
 export interface FetchViewStreamOptions extends FetchViewOptions {
@@ -49,6 +64,7 @@ export async function fetchView(
   let currentView: ProtocolView | null = null;
   let destroyed = false;
   const fetchImpl = requireFetchImpl(options.fetchImpl, 'fetchView');
+  const capabilities = options.capabilities ?? DEFAULT_RUNTIME_CAPABILITIES;
 
   async function load(
     fetchUrl: string,
@@ -57,7 +73,11 @@ export async function fetchView(
   ): Promise<RemotePayload> {
     const controller = new AbortController();
     const timeoutMs = options.timeoutMs ?? 5000;
-    const headers = { 'Content-Type': 'application/json', ...(options.headers ?? {}) };
+    const headers = {
+      'Content-Type': 'application/json',
+      ...createCapabilityHeaders(capabilities),
+      ...(options.headers ?? {}),
+    };
     const request: RequestInit = {
       method,
       headers,
@@ -80,7 +100,12 @@ export async function fetchView(
       }
 
       const payload = await response.json();
-      return normalizePayload(payload, options.validate);
+      return normalizePayload(payload, options.validate, {
+        capabilities,
+        container,
+        onTrace: options.onTrace,
+        context: { url: fetchUrl, method, source: 'remote' },
+      });
     } catch (error) {
       const normalized = error instanceof Error ? error : new Error(String(error));
       if (!destroyed) {
@@ -104,8 +129,9 @@ export async function fetchView(
       actions: buildActionHandlers(remoteView, container),
     };
 
-    mount(container, localView);
+    mount(container, localView, { traceActions: false });
     recordProtocolMount(container, remoteView);
+    options.onNegotiated?.(negotiateCapabilities(remoteView, capabilities));
   }
 
   function buildActionHandlers(
@@ -119,6 +145,14 @@ export async function fetchView(
       switch (descriptor.type) {
         case 'fetch':
           handlers[name] = async (_state, event) => {
+            const startedAt = now();
+            emitActionTrace(el, options.onTrace, {
+              phase: 'start',
+              name,
+              actionType: 'fetch',
+              method: descriptor.method ?? 'POST',
+              url: descriptor.url,
+            });
             try {
               const updated = resolvePayload(await load(
                 descriptor.url,
@@ -127,8 +161,25 @@ export async function fetchView(
               ));
               if (destroyed) return;
               mountRemote(updated);
+              emitActionTrace(el, options.onTrace, {
+                phase: 'success',
+                name,
+                actionType: 'fetch',
+                method: descriptor.method ?? 'POST',
+                url: descriptor.url,
+                durationMs: now() - startedAt,
+              });
             } catch (error) {
               const normalized = error instanceof Error ? error : new Error(String(error));
+              emitActionTrace(el, options.onTrace, {
+                phase: 'error',
+                name,
+                actionType: 'fetch',
+                method: descriptor.method ?? 'POST',
+                url: descriptor.url,
+                durationMs: now() - startedAt,
+                error: normalized.message,
+              });
               if (!(event instanceof Event)) {
                 console.error(`[CUP] action "${name}" failed:`, normalized);
               }
@@ -137,22 +188,48 @@ export async function fetchView(
           break;
         case 'emit':
           handlers[name] = () => {
+            const startedAt = now();
+            emitActionTrace(el, options.onTrace, {
+              phase: 'start',
+              name,
+              actionType: 'emit',
+            });
             el.dispatchEvent(
               new CustomEvent(descriptor.event, {
                 bubbles: true,
                 detail: descriptor.detail ?? {},
               }),
             );
+            emitActionTrace(el, options.onTrace, {
+              phase: 'success',
+              name,
+              actionType: 'emit',
+              durationMs: now() - startedAt,
+            });
           };
           break;
         case 'navigate':
           handlers[name] = () => {
+            const startedAt = now();
+            emitActionTrace(el, options.onTrace, {
+              phase: 'start',
+              name,
+              actionType: 'navigate',
+              url: descriptor.url,
+            });
             if (descriptor.replace) {
               history.replaceState(null, '', descriptor.url);
             } else {
               history.pushState(null, '', descriptor.url);
             }
             window.dispatchEvent(new PopStateEvent('popstate'));
+            emitActionTrace(el, options.onTrace, {
+              phase: 'success',
+              name,
+              actionType: 'navigate',
+              url: descriptor.url,
+              durationMs: now() - startedAt,
+            });
           };
           break;
       }
@@ -187,7 +264,12 @@ export async function fetchView(
       if (!currentView) {
         throw new Error('[CUP] received a patch before any remote view was mounted');
       }
-      return applyProtocolPatch(currentView, payload);
+      return validateProtocolView(applyProtocolPatch(currentView, payload), {
+        capabilities,
+        container,
+        onTrace: options.onTrace,
+        context: { source: 'patch' },
+      });
     }
     return payload;
   }
@@ -203,9 +285,11 @@ export async function fetchViewStream(
   let destroyed = false;
   let closed = false;
   const fetchImpl = requireFetchImpl(options.fetchImpl, 'fetchViewStream');
+  const capabilities = options.capabilities ?? DEFAULT_RUNTIME_CAPABILITIES;
   const controller = new AbortController();
   const headers = {
     Accept: 'application/x-ndjson, application/json',
+    ...createCapabilityHeaders(capabilities),
     ...(options.headers ?? {}),
   };
 
@@ -220,8 +304,9 @@ export async function fetchViewStream(
       actions: buildActionHandlers(remoteView, container),
     };
 
-    mount(container, localView);
+    mount(container, localView, { traceActions: false });
     recordProtocolMount(container, remoteView);
+    options.onNegotiated?.(negotiateCapabilities(remoteView, capabilities));
   }
 
   function buildActionHandlers(
@@ -235,6 +320,14 @@ export async function fetchViewStream(
       switch (descriptor.type) {
         case 'fetch':
           handlers[name] = async (_state, event) => {
+            const startedAt = now();
+            emitActionTrace(el, options.onTrace, {
+              phase: 'start',
+              name,
+              actionType: 'fetch',
+              method: descriptor.method ?? 'POST',
+              url: descriptor.url,
+            });
             try {
               const updated = await loadActionResponse(
                 descriptor.url,
@@ -243,8 +336,25 @@ export async function fetchViewStream(
               );
               if (destroyed) return;
               mountRemote(updated);
+              emitActionTrace(el, options.onTrace, {
+                phase: 'success',
+                name,
+                actionType: 'fetch',
+                method: descriptor.method ?? 'POST',
+                url: descriptor.url,
+                durationMs: now() - startedAt,
+              });
             } catch (error) {
               const normalized = error instanceof Error ? error : new Error(String(error));
+              emitActionTrace(el, options.onTrace, {
+                phase: 'error',
+                name,
+                actionType: 'fetch',
+                method: descriptor.method ?? 'POST',
+                url: descriptor.url,
+                durationMs: now() - startedAt,
+                error: normalized.message,
+              });
               if (!(event instanceof Event)) {
                 console.error(`[CUP] action "${name}" failed:`, normalized);
               }
@@ -253,22 +363,48 @@ export async function fetchViewStream(
           break;
         case 'emit':
           handlers[name] = () => {
+            const startedAt = now();
+            emitActionTrace(el, options.onTrace, {
+              phase: 'start',
+              name,
+              actionType: 'emit',
+            });
             el.dispatchEvent(
               new CustomEvent(descriptor.event, {
                 bubbles: true,
                 detail: descriptor.detail ?? {},
               }),
             );
+            emitActionTrace(el, options.onTrace, {
+              phase: 'success',
+              name,
+              actionType: 'emit',
+              durationMs: now() - startedAt,
+            });
           };
           break;
         case 'navigate':
           handlers[name] = () => {
+            const startedAt = now();
+            emitActionTrace(el, options.onTrace, {
+              phase: 'start',
+              name,
+              actionType: 'navigate',
+              url: descriptor.url,
+            });
             if (descriptor.replace) {
               history.replaceState(null, '', descriptor.url);
             } else {
               history.pushState(null, '', descriptor.url);
             }
             window.dispatchEvent(new PopStateEvent('popstate'));
+            emitActionTrace(el, options.onTrace, {
+              phase: 'success',
+              name,
+              actionType: 'navigate',
+              url: descriptor.url,
+              durationMs: now() - startedAt,
+            });
           };
           break;
       }
@@ -284,7 +420,11 @@ export async function fetchViewStream(
   ): Promise<ProtocolView> {
     const actionController = new AbortController();
     const timeoutMs = options.timeoutMs ?? 5000;
-    const actionHeaders = { 'Content-Type': 'application/json', ...(options.headers ?? {}) };
+    const actionHeaders = {
+      'Content-Type': 'application/json',
+      ...createCapabilityHeaders(capabilities),
+      ...(options.headers ?? {}),
+    };
     const request: RequestInit = {
       method,
       headers: actionHeaders,
@@ -306,7 +446,12 @@ export async function fetchViewStream(
         throw new Error(`[CUP] fetchViewStream: ${method} ${fetchUrl} -> ${response.status} ${response.statusText}`);
       }
       const payload = await response.json();
-      return resolvePayload(normalizePayload(payload, options.validate));
+      return resolvePayload(normalizePayload(payload, options.validate, {
+        capabilities,
+        container,
+        onTrace: options.onTrace,
+        context: { url: fetchUrl, method, source: 'remote' },
+      }));
     } catch (error) {
       const normalized = error instanceof Error ? error : new Error(String(error));
       if (!destroyed) {
@@ -324,7 +469,12 @@ export async function fetchViewStream(
       if (!currentView) {
         throw new Error('[CUP] received a patch before any remote view was mounted');
       }
-      return applyProtocolPatch(currentView, payload);
+      return validateProtocolView(applyProtocolPatch(currentView, payload), {
+        capabilities,
+        container,
+        onTrace: options.onTrace,
+        context: { source: 'patch' },
+      });
     }
     return payload;
   }
@@ -374,7 +524,12 @@ export async function fetchViewStream(
   function flushBuffer(rawLine: string): void {
     const line = rawLine.trim();
     if (!line || destroyed || closed) return;
-    const payload = normalizePayload(JSON.parse(line), options.validate);
+    const payload = normalizePayload(JSON.parse(line), options.validate, {
+      capabilities,
+      container,
+      onTrace: options.onTrace,
+      context: { url, method: 'GET', source: 'stream' },
+    });
     const nextView = resolvePayload(payload);
     mountRemote(nextView);
     options.onChunk?.(nextView);
@@ -410,12 +565,33 @@ function requireFetchImpl(
   );
 }
 
-function normalizePayload(payload: unknown, shouldValidate = true): RemotePayload {
-  if (!shouldValidate) {
+function normalizePayload(
+  payload: unknown,
+  shouldValidate = true,
+  options?: {
+    capabilities: CapabilitySupport;
+    container: Element;
+    onTrace?: TraceListener;
+    context: ValidationTraceContext;
+  },
+): RemotePayload {
+  if (!shouldValidate || !options) {
     return isProtocolPatch(payload) ? payload as ProtocolPatch : payload as ProtocolView;
   }
 
-  return isProtocolPatch(payload) ? validateProtocolPatch(payload) : validateProtocolView(payload);
+  return isProtocolPatch(payload)
+    ? validateProtocolPatch(payload, {
+      capabilities: options.capabilities,
+      container: options.container,
+      onTrace: options.onTrace,
+      context: options.context,
+    })
+    : validateProtocolView(payload, {
+      capabilities: options.capabilities,
+      container: options.container,
+      onTrace: options.onTrace,
+      context: options.context,
+    });
 }
 
 function appendQuery(url: string, values: Record<string, JSONValue>): string {
@@ -432,4 +608,28 @@ function serializeQueryValue(value: JSONValue): string {
     return String(value);
   }
   return JSON.stringify(value);
+}
+
+function emitActionTrace(
+  container: Element,
+  listener: TraceListener | undefined,
+  trace: Omit<Parameters<typeof emitRuntimeTrace>[0], 'kind' | 'at' | 'source'> & {
+    phase: 'start' | 'success' | 'error';
+    name: string;
+    actionType: 'fetch' | 'emit' | 'navigate';
+  },
+): void {
+  emitRuntimeTrace({
+    kind: 'action',
+    at: new Date().toISOString(),
+    source: 'remote',
+    ...trace,
+  }, {
+    container,
+    listener,
+  });
+}
+
+function now(): number {
+  return typeof performance !== 'undefined' ? performance.now() : Date.now();
 }

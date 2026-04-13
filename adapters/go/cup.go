@@ -20,9 +20,11 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 )
 
-const adapterVersion = "cup-go/0.2.4"
+const adapterVersion = "cup-go/0.3.0"
+const provenanceExtension = "cup.provenance"
 
 var (
 	scriptTagPattern     = regexp.MustCompile(`(?i)<script\b`)
@@ -100,6 +102,36 @@ type meta struct {
 	Generator string `json:"generator"`
 	Title     string `json:"title,omitempty"`
 	Route     string `json:"route,omitempty"`
+	Provenance *provenance `json:"provenance,omitempty"`
+	Extensions map[string]extensionDescriptor `json:"extensions,omitempty"`
+}
+
+type provenance struct {
+	Source          string               `json:"source,omitempty"`
+	GeneratedBy     string               `json:"generatedBy,omitempty"`
+	GeneratedAt     string               `json:"generatedAt,omitempty"`
+	RequestID       string               `json:"requestId,omitempty"`
+	Validation      *validationTrace     `json:"validation,omitempty"`
+	PolicyDecisions []policyDecision     `json:"policyDecisions,omitempty"`
+}
+
+type validationTrace struct {
+	Schema    string `json:"schema"`
+	Policy    string `json:"policy,omitempty"`
+	Validator string `json:"validator,omitempty"`
+	CheckedAt string `json:"checkedAt,omitempty"`
+}
+
+type policyDecision struct {
+	Policy  string `json:"policy"`
+	Outcome string `json:"outcome"`
+	Detail  string `json:"detail,omitempty"`
+}
+
+type extensionDescriptor struct {
+	Version  string `json:"version"`
+	Required bool   `json:"required,omitempty"`
+	Config   S      `json:"config,omitempty"`
 }
 
 type uiViewJSON struct {
@@ -200,6 +232,7 @@ func (v *UIView) Route(r string) *UIView {
 
 // ToMap returns the UIView as a plain map ready for JSON marshalling.
 func (v *UIView) ToMap() uiViewJSON {
+	now := isoNow()
 	return uiViewJSON{
 		Template: v.template,
 		State:    v.state,
@@ -210,6 +243,22 @@ func (v *UIView) ToMap() uiViewJSON {
 			Generator: adapterVersion,
 			Title:     v.title,
 			Route:     v.route,
+			Provenance: &provenance{
+				Source:      "adapter",
+				GeneratedBy: adapterVersion,
+				GeneratedAt: now,
+				Validation: &validationTrace{
+					Schema:    "valid",
+					Policy:    "skipped",
+					Validator: adapterVersion,
+					CheckedAt: now,
+				},
+			},
+			Extensions: map[string]extensionDescriptor{
+				provenanceExtension: {
+					Version: "1",
+				},
+			},
 		},
 	}
 }
@@ -387,7 +436,7 @@ func validateMeta(input any, path string, issues *[]string) {
 		return
 	}
 
-	validateAllowedKeys(metaValue, []string{"version", "lang", "generator", "title", "route"}, path, issues)
+	validateAllowedKeys(metaValue, []string{"version", "lang", "generator", "title", "route", "provenance", "extensions"}, path, issues)
 
 	if version, exists := metaValue["version"]; exists {
 		versionString, ok := version.(string)
@@ -400,6 +449,21 @@ func validateMeta(input any, path string, issues *[]string) {
 		if value, exists := metaValue[key]; exists {
 			if _, ok := value.(string); !ok {
 				*issues = append(*issues, fmt.Sprintf("%s.%s must be a string", path, key))
+			}
+		}
+	}
+
+	if provenanceValue, exists := metaValue["provenance"]; exists {
+		validateProvenance(provenanceValue, path+".provenance", issues)
+	}
+
+	if extensionsValue, exists := metaValue["extensions"]; exists {
+		extensions, ok := extensionsValue.(map[string]any)
+		if !ok {
+			*issues = append(*issues, fmt.Sprintf("%s.extensions must be an object", path))
+		} else {
+			for name, descriptor := range extensions {
+				validateExtensionDescriptor(descriptor, path+".extensions."+name, issues)
 			}
 		}
 	}
@@ -432,6 +496,123 @@ func validateAllowedKeys(input map[string]any, allowed []string, path string, is
 	for key := range input {
 		if !contains(allowed, key) {
 			*issues = append(*issues, fmt.Sprintf("%s contains unsupported property %q", path, key))
+		}
+	}
+}
+
+func validateProvenance(input any, path string, issues *[]string) {
+	value, ok := input.(map[string]any)
+	if !ok {
+		*issues = append(*issues, fmt.Sprintf("%s must be an object", path))
+		return
+	}
+
+	validateAllowedKeys(value, []string{"source", "generatedBy", "generatedAt", "requestId", "validation", "policyDecisions"}, path, issues)
+
+	if source, exists := value["source"]; exists {
+		sourceString, ok := source.(string)
+		if !ok || !contains([]string{"human", "ai", "adapter", "hybrid"}, sourceString) {
+			*issues = append(*issues, fmt.Sprintf("%s.source must be one of human, ai, adapter, hybrid", path))
+		}
+	}
+	for _, key := range []string{"generatedBy", "generatedAt", "requestId"} {
+		if candidate, exists := value[key]; exists {
+			if _, ok := candidate.(string); !ok {
+				*issues = append(*issues, fmt.Sprintf("%s.%s must be a string", path, key))
+			}
+		}
+	}
+
+	if validation, exists := value["validation"]; exists {
+		validateValidationProvenance(validation, path+".validation", issues)
+	}
+
+	if decisions, exists := value["policyDecisions"]; exists {
+		decisionList, ok := decisions.([]any)
+		if !ok {
+			*issues = append(*issues, fmt.Sprintf("%s.policyDecisions must be an array", path))
+		} else {
+			for index, decision := range decisionList {
+				validatePolicyDecision(decision, fmt.Sprintf("%s.policyDecisions[%d]", path, index), issues)
+			}
+		}
+	}
+}
+
+func validateValidationProvenance(input any, path string, issues *[]string) {
+	value, ok := input.(map[string]any)
+	if !ok {
+		*issues = append(*issues, fmt.Sprintf("%s must be an object", path))
+		return
+	}
+
+	validateAllowedKeys(value, []string{"schema", "policy", "validator", "checkedAt"}, path, issues)
+
+	schema, ok := value["schema"].(string)
+	if !ok || !contains([]string{"valid", "repaired", "unchecked"}, schema) {
+		*issues = append(*issues, fmt.Sprintf("%s.schema must be one of valid, repaired, unchecked", path))
+	}
+	if policy, exists := value["policy"]; exists {
+		policyString, ok := policy.(string)
+		if !ok || !contains([]string{"passed", "failed", "skipped"}, policyString) {
+			*issues = append(*issues, fmt.Sprintf("%s.policy must be one of passed, failed, skipped", path))
+		}
+	}
+	for _, key := range []string{"validator", "checkedAt"} {
+		if candidate, exists := value[key]; exists {
+			if _, ok := candidate.(string); !ok {
+				*issues = append(*issues, fmt.Sprintf("%s.%s must be a string", path, key))
+			}
+		}
+	}
+}
+
+func validatePolicyDecision(input any, path string, issues *[]string) {
+	value, ok := input.(map[string]any)
+	if !ok {
+		*issues = append(*issues, fmt.Sprintf("%s must be an object", path))
+		return
+	}
+
+	validateAllowedKeys(value, []string{"policy", "outcome", "detail"}, path, issues)
+
+	if _, ok := value["policy"].(string); !ok {
+		*issues = append(*issues, fmt.Sprintf("%s.policy must be a string", path))
+	}
+	outcome, ok := value["outcome"].(string)
+	if !ok || !contains([]string{"allow", "deny", "skip"}, outcome) {
+		*issues = append(*issues, fmt.Sprintf("%s.outcome must be one of allow, deny, skip", path))
+	}
+	if detail, exists := value["detail"]; exists {
+		if _, ok := detail.(string); !ok {
+			*issues = append(*issues, fmt.Sprintf("%s.detail must be a string", path))
+		}
+	}
+}
+
+func validateExtensionDescriptor(input any, path string, issues *[]string) {
+	value, ok := input.(map[string]any)
+	if !ok {
+		*issues = append(*issues, fmt.Sprintf("%s must be an object", path))
+		return
+	}
+
+	validateAllowedKeys(value, []string{"version", "required", "config"}, path, issues)
+
+	if _, ok := value["version"].(string); !ok {
+		*issues = append(*issues, fmt.Sprintf("%s.version must be a string", path))
+	}
+	if required, exists := value["required"]; exists {
+		if _, ok := required.(bool); !ok {
+			*issues = append(*issues, fmt.Sprintf("%s.required must be a boolean", path))
+		}
+	}
+	if config, exists := value["config"]; exists {
+		configMap, ok := config.(map[string]any)
+		if !ok {
+			*issues = append(*issues, fmt.Sprintf("%s.config must be an object", path))
+		} else {
+			validateJSONObject(configMap, path+".config", issues)
 		}
 	}
 }
@@ -521,4 +702,8 @@ func isRelativeURL(url string) bool {
 		strings.HasPrefix(url, "../") ||
 		strings.HasPrefix(url, "?") ||
 		strings.HasPrefix(url, "#")
+}
+
+func isoNow() string {
+	return time.Now().UTC().Format(time.RFC3339)
 }

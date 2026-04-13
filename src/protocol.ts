@@ -4,6 +4,7 @@ export interface JSONObject {
   [key: string]: JSONValue;
 }
 export interface JSONArray extends Array<JSONValue> {}
+export type ProtocolVersion = '1';
 
 export type HTTPMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -31,12 +32,42 @@ export type ActionDescriptor =
   | EmitActionDescriptor
   | NavigateActionDescriptor;
 
+export interface ViewPolicyDecision {
+  policy: string;
+  outcome: 'allow' | 'deny' | 'skip';
+  detail?: string;
+}
+
+export interface ViewValidationProvenance {
+  schema: 'valid' | 'repaired' | 'unchecked';
+  policy?: 'passed' | 'failed' | 'skipped';
+  validator?: string;
+  checkedAt?: string;
+}
+
+export interface ViewProvenance {
+  source?: 'human' | 'ai' | 'adapter' | 'hybrid';
+  generatedBy?: string;
+  generatedAt?: string;
+  requestId?: string;
+  validation?: ViewValidationProvenance;
+  policyDecisions?: ViewPolicyDecision[];
+}
+
+export interface ProtocolExtensionDescriptor {
+  version: string;
+  required?: boolean;
+  config?: Record<string, JSONValue>;
+}
+
 export interface ViewMeta {
-  version?: '1';
+  version?: ProtocolVersion;
   lang?: string;
   generator?: string;
   title?: string;
   route?: string;
+  provenance?: ViewProvenance;
+  extensions?: Record<string, ProtocolExtensionDescriptor>;
 }
 
 export interface ProtocolView {

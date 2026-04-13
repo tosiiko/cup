@@ -4,6 +4,7 @@ import type {
   ProtocolView,
   ViewMeta,
 } from './protocol.js';
+import { clearTraces, emitRuntimeTrace, inspectTraces, type RuntimeTrace } from './tracing.js';
 import type { ClientView } from './types.js';
 
 type InspectorListener = (snapshot: InspectorSnapshot | null) => void;
@@ -47,6 +48,7 @@ export interface InspectorSnapshot {
   remoteActions: Record<string, ActionDescriptor> | null;
   meta: ViewMeta | null;
   lastError: InspectorError | null;
+  traces: RuntimeTrace[];
   updatedAt: string;
 }
 
@@ -70,6 +72,7 @@ export function inspectView(container: Element): InspectorSnapshot | null {
     remoteActions: cloneInspectable(record.protocol?.actions ?? null),
     meta: cloneInspectable(record.protocol?.meta ?? null),
     lastError: cloneInspectable(record.lastError),
+    traces: inspectTraces(container),
     updatedAt: record.updatedAt,
   };
 }
@@ -96,6 +99,7 @@ export function createInspector(container: Element): Inspector {
 
 export function recordClientMount(container: Element, view: ClientView): void {
   const record = ensureRecord(container);
+  const updatedAt = new Date().toISOString();
   record.source = 'client';
   record.client = {
     template: view.template,
@@ -104,12 +108,22 @@ export function recordClientMount(container: Element, view: ClientView): void {
   };
   record.protocol = null;
   record.lastError = null;
-  record.updatedAt = new Date().toISOString();
+  record.updatedAt = updatedAt;
+  emitRuntimeTrace({
+    kind: 'render',
+    at: updatedAt,
+    source: 'client',
+    templateLength: view.template.length,
+    stateKeys: Object.keys(view.state),
+    actionNames: Object.keys(view.actions ?? {}),
+    extensions: [],
+  }, { container });
   notify(container);
 }
 
 export function recordProtocolMount(container: Element, view: ProtocolView): void {
   const record = ensureRecord(container);
+  const updatedAt = new Date().toISOString();
   record.source = 'remote';
   record.protocol = {
     template: view.template,
@@ -118,7 +132,18 @@ export function recordProtocolMount(container: Element, view: ProtocolView): voi
     meta: cloneInspectable(view.meta ?? null),
   };
   record.lastError = null;
-  record.updatedAt = new Date().toISOString();
+  record.updatedAt = updatedAt;
+  emitRuntimeTrace({
+    kind: 'render',
+    at: updatedAt,
+    source: 'remote',
+    templateLength: view.template.length,
+    stateKeys: Object.keys(view.state),
+    actionNames: Object.keys(view.actions ?? {}),
+    ...(view.meta?.title ? { title: view.meta.title } : {}),
+    ...(view.meta?.route ? { route: view.meta.route } : {}),
+    extensions: Object.entries(view.meta?.extensions ?? {}).map(([name, descriptor]) => `${name}@${descriptor.version}`),
+  }, { container });
   notify(container);
 }
 
@@ -140,6 +165,7 @@ export function recordInspectionError(
 
 export function clearInspection(container: Element): void {
   records.delete(container);
+  clearTraces(container);
   notify(container, null);
 }
 

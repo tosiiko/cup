@@ -6,7 +6,7 @@ import java.util.Map;
 public final class UIView {
     public static final String ADAPTER_NAME = "java-cup";
     public static final String PROTOCOL_VERSION = "1";
-    public static final String GENERATOR = "java-cup/0.2.4";
+    public static final String GENERATOR = "java-cup/0.3.0";
 
     private final String template;
     private final Map<String, Object> state = new LinkedHashMap<>();

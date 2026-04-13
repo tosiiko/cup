@@ -1,4 +1,16 @@
-import type { ActionDescriptor, HTTPMethod, JSONValue, ProtocolPatch, ProtocolView, ViewMeta } from './protocol.js';
+import type {
+  ActionDescriptor,
+  HTTPMethod,
+  JSONValue,
+  ProtocolExtensionDescriptor,
+  ProtocolPatch,
+  ProtocolView,
+  ViewMeta,
+  ViewPolicyDecision,
+  ViewProvenance,
+  ViewValidationProvenance,
+} from './protocol.js';
+import { CUP_PROVENANCE_EXTENSION } from './negotiation.js';
 import type { ViewPolicy } from './policy.js';
 import { validateViewPolicy } from './policy.js';
 import { validateProtocolPatch, validateProtocolView } from './validate.js';
@@ -18,7 +30,11 @@ const ACTION_KEYS: Record<ActionDescriptor['type'], Set<string>> = {
   emit: new Set(['type', 'event', 'detail']),
   navigate: new Set(['type', 'url', 'replace']),
 };
-const META_KEYS = new Set(['version', 'lang', 'generator', 'title', 'route']);
+const META_KEYS = new Set(['version', 'lang', 'generator', 'title', 'route', 'provenance', 'extensions']);
+const PROVENANCE_KEYS = new Set(['source', 'generatedBy', 'generatedAt', 'requestId', 'validation', 'policyDecisions']);
+const VALIDATION_PROVENANCE_KEYS = new Set(['schema', 'policy', 'validator', 'checkedAt']);
+const POLICY_DECISION_KEYS = new Set(['policy', 'outcome', 'detail']);
+const EXTENSION_KEYS = new Set(['version', 'required', 'config']);
 const METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
 const ABSOLUTE_URL_PATTERN = /^[a-z][a-z\d+.-]*:\/\//i;
 
@@ -42,7 +58,8 @@ export function repairProtocolViewCandidate(input: unknown, options: RepairOptio
   const view = isPlainObject(input) ? sanitizeViewCandidate(input) : { template: '<p></p>', state: {} };
   view.meta = sanitizeMeta(view.meta, options.defaults);
   const repaired = validateProtocolView(view);
-  return options.policy ? validateViewPolicy(repaired, options.policy) : repaired;
+  const normalized = options.policy ? validateViewPolicy(repaired, options.policy) : repaired;
+  return annotateRepairedView(normalized, Boolean(options.policy));
 }
 
 export function repairProtocolPatchCandidate(input: unknown, options: RepairOptions = {}): ProtocolPatch {
@@ -164,12 +181,16 @@ function sanitizeActions(input: Record<string, unknown>): Record<string, ActionD
 
 function sanitizeMeta(input: unknown, defaults?: { title?: string; route?: string }): ViewMeta {
   const meta = isPlainObject(input) ? pickAllowed(input, META_KEYS) : {};
+  const provenance = sanitizeProvenance(meta.provenance);
+  const extensions = sanitizeExtensions(meta.extensions, provenance !== undefined);
   return {
     version: '1',
     ...(typeof meta.lang === 'string' ? { lang: meta.lang } : {}),
     ...(typeof meta.generator === 'string' ? { generator: meta.generator } : {}),
     ...(typeof meta.title === 'string' ? { title: meta.title } : defaults?.title ? { title: defaults.title } : {}),
     ...(typeof meta.route === 'string' ? { route: meta.route } : defaults?.route ? { route: defaults.route } : {}),
+    ...(provenance ? { provenance } : {}),
+    ...(extensions ? { extensions } : {}),
   };
 }
 
@@ -212,4 +233,148 @@ function stripAbsoluteURLOrigin(url: string): string {
 
   const suffix = withoutScheme.slice(delimiterIndex);
   return suffix.startsWith('/') ? suffix : `/${suffix}`;
+}
+
+function sanitizeProvenance(input: unknown): ViewProvenance | undefined {
+  if (!isPlainObject(input)) return undefined;
+
+  const provenance = pickAllowed(input, PROVENANCE_KEYS);
+  const validation = sanitizeValidationProvenance(provenance.validation);
+  const policyDecisions = sanitizePolicyDecisions(provenance.policyDecisions);
+
+  const out: ViewProvenance = {
+    ...(typeof provenance.source === 'string' ? { source: provenance.source as ViewProvenance['source'] } : {}),
+    ...(typeof provenance.generatedBy === 'string' ? { generatedBy: provenance.generatedBy } : {}),
+    ...(typeof provenance.generatedAt === 'string' ? { generatedAt: provenance.generatedAt } : {}),
+    ...(typeof provenance.requestId === 'string' ? { requestId: provenance.requestId } : {}),
+    ...(validation ? { validation } : {}),
+    ...(policyDecisions ? { policyDecisions } : {}),
+  };
+
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function sanitizeValidationProvenance(input: unknown): ViewValidationProvenance | undefined {
+  if (!isPlainObject(input)) return undefined;
+
+  const validation = pickAllowed(input, VALIDATION_PROVENANCE_KEYS);
+  const schema = validation.schema === 'repaired' ? 'repaired'
+    : validation.schema === 'unchecked' ? 'unchecked'
+      : validation.schema === 'valid' ? 'valid'
+        : undefined;
+  const policy = validation.policy === 'failed' ? 'failed'
+    : validation.policy === 'skipped' ? 'skipped'
+      : validation.policy === 'passed' ? 'passed'
+        : undefined;
+
+  if (!schema) {
+    return undefined;
+  }
+
+  return {
+    schema,
+    ...(policy ? { policy } : {}),
+    ...(typeof validation.validator === 'string' ? { validator: validation.validator } : {}),
+    ...(typeof validation.checkedAt === 'string' ? { checkedAt: validation.checkedAt } : {}),
+  };
+}
+
+function sanitizePolicyDecisions(input: unknown): ViewPolicyDecision[] | undefined {
+  if (!Array.isArray(input)) return undefined;
+
+  const decisions = input
+    .map((entry) => sanitizePolicyDecision(entry))
+    .filter((entry): entry is ViewPolicyDecision => entry !== undefined);
+  return decisions.length > 0 ? decisions : undefined;
+}
+
+function sanitizePolicyDecision(input: unknown): ViewPolicyDecision | undefined {
+  if (!isPlainObject(input)) return undefined;
+
+  const decision = pickAllowed(input, POLICY_DECISION_KEYS);
+  if (typeof decision.policy !== 'string') return undefined;
+  if (decision.outcome !== 'allow' && decision.outcome !== 'deny' && decision.outcome !== 'skip') {
+    return undefined;
+  }
+
+  return {
+    policy: decision.policy,
+    outcome: decision.outcome,
+    ...(typeof decision.detail === 'string' ? { detail: decision.detail } : {}),
+  };
+}
+
+function sanitizeExtensions(
+  input: unknown,
+  hasProvenance: boolean,
+): Record<string, ProtocolExtensionDescriptor> | undefined {
+  const out: Record<string, ProtocolExtensionDescriptor> = {};
+
+  if (isPlainObject(input)) {
+    for (const [name, descriptor] of Object.entries(input)) {
+      const sanitized = sanitizeExtensionDescriptor(descriptor);
+      if (sanitized) {
+        out[name] = sanitized;
+      }
+    }
+  }
+
+  if (hasProvenance && !out[CUP_PROVENANCE_EXTENSION]) {
+    out[CUP_PROVENANCE_EXTENSION] = { version: '1' };
+  }
+
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function sanitizeExtensionDescriptor(input: unknown): ProtocolExtensionDescriptor | undefined {
+  if (!isPlainObject(input)) return undefined;
+
+  const descriptor = pickAllowed(input, EXTENSION_KEYS);
+  if (typeof descriptor.version !== 'string') {
+    return undefined;
+  }
+
+  return {
+    version: descriptor.version,
+    ...(typeof descriptor.required === 'boolean' ? { required: descriptor.required } : {}),
+    ...(isPlainObject(descriptor.config) ? { config: sanitizeJSONObject(descriptor.config) } : {}),
+  };
+}
+
+function annotateRepairedView(view: ProtocolView, policyApplied: boolean): ProtocolView {
+  const existingMeta = view.meta ?? { version: '1' as const };
+  const existingProvenance = existingMeta.provenance ?? {};
+  const validation = (existingProvenance.validation ?? {}) as Partial<ViewValidationProvenance>;
+
+  return {
+    ...view,
+    meta: {
+      ...existingMeta,
+      provenance: {
+        ...existingProvenance,
+        ...(existingProvenance.generatedBy ? {} : existingMeta.generator ? { generatedBy: existingMeta.generator } : {}),
+        validation: {
+          ...validation,
+          schema: 'repaired',
+          policy: policyApplied ? 'passed' : validation.policy ?? 'skipped',
+          validator: validation.validator ?? 'repairProtocolViewCandidate',
+          checkedAt: new Date().toISOString(),
+        },
+        ...(policyApplied ? {
+          policyDecisions: [
+            ...(existingProvenance.policyDecisions ?? []),
+            {
+              policy: 'view-policy',
+              outcome: 'allow',
+              detail: 'validated after repair',
+            },
+          ],
+        } : {}),
+      },
+      extensions: {
+        [CUP_PROVENANCE_EXTENSION]: { version: '1' },
+        ...(existingMeta.extensions ?? {}),
+      },
+    },
+  };
 }

@@ -1,6 +1,6 @@
 {
   "name": "@tosiiko/cup",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "CUP universal UI runtime for protocol-driven browser rendering",
   "license": "Apache-2.0",
   "type": "module",

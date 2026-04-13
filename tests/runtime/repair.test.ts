@@ -29,12 +29,23 @@ describe('repair helpers', () => {
     expect(repaired.template).not.toContain('onclick=');
     expect(repaired.template).toContain('href="#"');
     expect(repaired.state).toEqual({ title: 'Hello', count: 0 });
-    expect(repaired.meta).toEqual({
+    expect(repaired.meta).toMatchObject({
       version: '1',
       lang: 'python',
       title: 'Welcome',
       route: '/welcome',
+      provenance: {
+        validation: {
+          schema: 'repaired',
+          policy: 'skipped',
+          validator: 'repairProtocolViewCandidate',
+        },
+      },
+      extensions: {
+        'cup.provenance': { version: '1' },
+      },
     });
+    expect(repaired.meta?.provenance?.validation?.checkedAt).toEqual(expect.any(String));
   });
 
   it('drops malformed actions and produces policy-compliant views', () => {

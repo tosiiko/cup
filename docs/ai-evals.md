@@ -19,6 +19,7 @@ Use prompts that ask for:
 3. run starter policy validation
 4. if it fails, run `repairProtocolViewCandidate()`
 5. re-validate the repaired result
+6. keep the repaired output's `meta.provenance` so reviewers can see that it was repaired
 
 ## Repo Fixtures
 
@@ -28,6 +29,8 @@ Use prompts that ask for:
   [`../tests/fixtures/ai/generated-unsafe.json`](../tests/fixtures/ai/generated-unsafe.json)
 - automated eval test:
   [`../tests/runtime/ai-fixtures.test.ts`](../tests/runtime/ai-fixtures.test.ts)
+- official adapter conformance test:
+  [`../tests/runtime/adapter-conformance.test.ts`](../tests/runtime/adapter-conformance.test.ts)
 
 ## Practical Rule
 

@@ -26,6 +26,7 @@ The baseline rule is simple:
 In practice, that means:
 
 - `meta.version = "1"` remains the stable wire contract for the current generation of CUP
+- additive metadata such as `meta.provenance` and `meta.extensions` may grow within `v1`
 - existing action kinds stay stable:
   `fetch`, `emit`, `navigate`
 - policy hardening may reject unsafe output, but it must not silently change the meaning of previously valid safe output
@@ -49,7 +50,10 @@ If a change would break documented usage, it must not ship as a silent patch-lev
 Current CUP negotiation is intentionally simple:
 
 - clients validate `meta.version`
+- clients may advertise supported versions and extensions with
+  `X-CUP-Protocol-Versions` and `X-CUP-Extensions`
 - official adapters emit `v1`
+- additive capabilities are declared under `meta.extensions`
 - the runtime treats `v1` as the only accepted stable protocol version today
 
 That is the current strategy:
@@ -57,6 +61,7 @@ That is the current strategy:
 - static `v1` by default
 - no silent downgrade or upgrade logic
 - no implicit cross-version coercion
+- required extensions must be negotiated explicitly; optional extensions may be ignored safely
 
 If CUP introduces `v2`, these rules apply:
 
@@ -94,6 +99,8 @@ Official adapters should:
 
 - declare which protocol versions they support
 - keep emitted `meta.version` aligned with the supported wire contract
+- keep `meta.provenance` truthful when they emit it
+- declare additive features in `meta.extensions` when they rely on them
 - avoid claiming publication or production status that the registry does not support
 - update their generator/version metadata when the repo release version changes
 
