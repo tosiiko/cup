@@ -60,6 +60,28 @@ describe('repair helpers', () => {
     });
   });
 
+  it('strips origins from absolute and protocol-relative action URLs', () => {
+    const repaired = repairProtocolViewCandidate({
+      template: '<button data-action="next">Next</button>',
+      state: {},
+      actions: {
+        next: { type: 'navigate', url: 'https://example.com/account?tab=security#access' },
+        sync: { type: 'fetch', url: '//example.com/api/sync?mode=full', method: 'POST' },
+      },
+    }, {
+      defaults: {
+        title: 'Account',
+        route: '/account',
+      },
+      policy: STARTER_VIEW_POLICY,
+    });
+
+    expect(repaired.actions).toEqual({
+      next: { type: 'navigate', url: '/account?tab=security#access' },
+      sync: { type: 'fetch', url: '/api/sync?mode=full', method: 'POST' },
+    });
+  });
+
   it('repairs patch candidates into valid merge patches', () => {
     const repaired = repairProtocolPatchCandidate({
       kind: 'something-else',

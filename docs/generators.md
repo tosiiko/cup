@@ -9,15 +9,19 @@ CUP now ships two generator layers:
 
 `cup init` is the fastest way to start development from an empty folder.
 
+`cup upgrade` refreshes the vendored `cup/index.js` runtime inside generated apps without regenerating the rest of the project.
+
 ## Project Init
 
-Use the package binary to scaffold a runnable login app into the current directory or a target directory:
+Use the package binary to scaffold a runnable CUP app into the current directory or a target directory:
 
 ```bash
 npx @tosiiko/cup init --adapter py-cup
 npx @tosiiko/cup init my-node-login --adapter node-cup
 npx @tosiiko/cup init my-ts-login --adapter ts-cup
 npx @tosiiko/cup init my-go-login --adapter go-cup
+npx @tosiiko/cup upgrade
+npx @tosiiko/cup upgrade services/internal-app
 ```
 
 Currently runnable `init` adapters:
@@ -29,12 +33,37 @@ Currently runnable `init` adapters:
 
 What `cup init` writes:
 
-- a working login flow
+- a working app you can run immediately
 - the CUP browser runtime where needed
 - a small server or app shell you can run immediately
 - a README with the next commands
 
 The goal is “pick up and load,” not “blank starter with homework.”
+
+Template behavior today:
+
+- `py-cup`
+  defaults to the standard structured Python app scaffold
+- `py-cup --template login`
+  keeps the tiny single-purpose login demo
+- `node-cup`, `ts-cup`, and `go-cup`
+  currently generate the login demo scaffolds
+
+## Runtime Upgrade
+
+Use this when a generated app vendors `cup/index.js` and you want to refresh it to the latest runtime shipped by the currently installed `@tosiiko/cup` package:
+
+```bash
+npx @tosiiko/cup upgrade
+```
+
+or for another folder:
+
+```bash
+npx @tosiiko/cup upgrade path/to/app
+```
+
+This replaces only `cup/index.js`. It does not rewrite your app code, templates, routes, or actions.
 
 The generators follow one rule on purpose: they write safe starter files and snippet files, but they do not silently rewrite your existing route or action modules.
 

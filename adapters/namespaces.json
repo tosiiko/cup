@@ -9,7 +9,7 @@
   "core": {
     "name": "@tosiiko/cup",
     "role": "core-runtime",
-    "package_version": "0.2.0",
+    "package_version": "0.2.4",
     "publication_status": "published",
     "protocol_versions": [
       "1"

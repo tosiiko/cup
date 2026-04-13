@@ -105,7 +105,7 @@ function filesFor(adapter) {
           name: `tosiiko/${adapter.namespace}`,
           description: 'CUP PHP adapter scaffold',
           type: 'library',
-          license: 'MIT',
+          license: 'Apache-2.0',
           autoload: {
             'psr-4': {
               'Tosiiko\\\\Cup\\\\': 'src/',

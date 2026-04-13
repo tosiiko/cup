@@ -46,6 +46,8 @@ try {
     'dist/index.js',
     'dist/index.d.ts',
     'package.json',
+    'scaffolds/python-standard/README.md',
+    'scaffolds/python-standard/app/server.py',
     'schema/uiview.v1.json',
     'styles/reference.css',
   ];
@@ -60,6 +62,9 @@ try {
     if (file.endsWith('.map')) {
       throw new Error(`packed artifact should not ship source maps: ${file}`);
     }
+    if (file.includes('__pycache__') || file.endsWith('.pyc') || file.endsWith('.pyo')) {
+      throw new Error(`packed artifact should not ship Python cache files: ${file}`);
+    }
   }
 
   const tarball = resolve(packDir, packResult.filename);
@@ -69,7 +74,7 @@ try {
     { encoding: 'utf8' },
   );
 
-  for (const marker of ['fetchView', 'fetchViewStream', 'globalThis["fetch"]', 'globalThis.fetch']) {
+  for (const marker of ['fetchView', 'fetchViewStream', 'globalThis["fetch"]', 'globalThis.fetch', 'http://', 'https://', 'new URL(']) {
     if (packedBundle.includes(marker)) {
       throw new Error(`packed core bundle should stay transport-free, but found marker: ${marker}`);
     }
@@ -114,8 +119,26 @@ try {
   if (!existsSync(resolve(pyInitDir, 'server.py'))) {
     throw new Error('packed cli should create a py-cup scaffold with server.py');
   }
+  if (!existsSync(resolve(pyInitDir, 'app', 'server.py'))) {
+    throw new Error('packed cli should create the standard py-cup app structure');
+  }
+  if (!existsSync(resolve(pyInitDir, 'templates', 'shell.html'))) {
+    throw new Error('packed cli should create file-based templates for py-cup');
+  }
   if (!existsSync(resolve(pyInitDir, 'cup', 'index.js'))) {
     throw new Error('packed cli should vendor the runtime into py-cup scaffolds');
+  }
+  if (existsSync(resolve(pyInitDir, 'vendor', 'py_cup', 'cup.py'))) {
+    throw new Error('packed default py-cup init should not vendor the adapter source');
+  }
+  const pyRuntime = resolve(pyInitDir, 'cup', 'index.js');
+  writeFileSync(pyRuntime, '// stale runtime\n', 'utf8');
+  execFileSync(cliBin, ['upgrade', pyInitDir], {
+    cwd: smokeDir,
+    stdio: 'inherit',
+  });
+  if (readFileSync(pyRuntime, 'utf8').includes('// stale runtime')) {
+    throw new Error('packed cli should refresh the vendored runtime with `cup upgrade`');
   }
 
   const tsInitDir = resolve(smokeDir, 'ts-init');

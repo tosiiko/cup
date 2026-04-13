@@ -1,12 +1,13 @@
 {
   "name": "@tosiiko/cup",
-  "version": "0.2.0",
+  "version": "0.2.4",
   "description": "CUP universal UI runtime for protocol-driven browser rendering",
+  "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "cup": "./bin/cup.mjs"
+    "cup": "bin/cup.mjs"
   },
   "publishConfig": {
     "access": "public"
@@ -15,6 +16,26 @@
     "bin",
     "dist",
     "docs",
+    "scaffolds/python-standard/.gitignore",
+    "scaffolds/python-standard/README.md",
+    "scaffolds/python-standard/index.html",
+    "scaffolds/python-standard/server.py",
+    "scaffolds/python-standard/app/__init__.py",
+    "scaffolds/python-standard/app/actions.py",
+    "scaffolds/python-standard/app/config.py",
+    "scaffolds/python-standard/app/cup_bridge.py",
+    "scaffolds/python-standard/app/data.py",
+    "scaffolds/python-standard/app/routes.py",
+    "scaffolds/python-standard/app/security.py",
+    "scaffolds/python-standard/app/server.py",
+    "scaffolds/python-standard/app/sessions.py",
+    "scaffolds/python-standard/app/templates.py",
+    "scaffolds/python-standard/app/views.py",
+    "scaffolds/python-standard/static/app.css",
+    "scaffolds/python-standard/static/app.js",
+    "scaffolds/python-standard/templates/pages/guide.html",
+    "scaffolds/python-standard/templates/pages/welcome.html",
+    "scaffolds/python-standard/templates/shell.html",
     "schema",
     "styles",
     "README.md",
@@ -33,7 +54,7 @@
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
-    "check": "npm run build && npm run test",
+    "check": "npm run build && npm run test && npm run pack:check",
     "demo:smoke": "node scripts/demo-smoke.mjs",
     "demo:build": "vite build examples/demo --outDir ../../dist-demo",
     "demo:dev": "vite examples/demo",

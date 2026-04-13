@@ -27,7 +27,7 @@ npm install @tosiiko/cup
 
 ## Initialize A Project
 
-You can now scaffold a runnable CUP login app directly into the current directory or a new folder.
+You can now scaffold a runnable CUP app directly into the current directory or a new folder.
 
 ```bash
 npx @tosiiko/cup init --adapter py-cup
@@ -44,7 +44,33 @@ Runnable `init` adapters today:
 - `node-cup`
 - `ts-cup`
 
-These scaffolds are meant to start like the repo demos do: they generate a real app shell, a real login flow, and the files needed to run immediately.
+These scaffolds are meant to start like the repo demos do: they generate a real app shell, the files needed to run immediately, and enough structure to start building instead of rewiring.
+
+`py-cup` now defaults to the standard structured Python app layout:
+
+```text
+my-cup-app/
+  app/
+  templates/
+  static/
+  cup/
+  server.py
+  README.md
+```
+
+If you want the older tiny Python login demo instead, use:
+
+```bash
+npx @tosiiko/cup init --adapter py-cup --template login
+```
+
+If you want to refresh a generated app to the latest packaged browser runtime later, run:
+
+```bash
+npx @tosiiko/cup upgrade
+```
+
+That updates the local `cup/index.js` snapshot inside apps that vendor the runtime.
 
 ## What A CUP View Looks Like
 
@@ -279,10 +305,9 @@ Use demos to study patterns. Use starters to begin a real project.
 ```bash
 npm install
 npm run build
-npm run test
+npm run check
 npm run demo:smoke
 npm run starter:smoke
-npm run pack:check
 ```
 
 Useful local commands:
@@ -300,10 +325,15 @@ node starters/node-dashboard/server.mjs
 ## Status
 
 - protocol version: `1`
-- package version: `0.2.0`
+- package version: `0.2.4`
 - browser target: modern evergreen browsers
 - current focus: stable backend-first runtime, adapters, starters, and release tooling
 
 ## License
 
-Current published releases are licensed under the [MIT License](./LICENSE).
+The current repository is licensed under the [Apache License 2.0](./LICENSE).
+
+Important note:
+
+- already-published npm releases through `0.2.3` were released under MIT
+- future releases from this repository follow Apache-2.0 unless explicitly noted otherwise

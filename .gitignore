@@ -5,3 +5,6 @@ dist-demo/
 __pycache__/
 .pytest_cache/
 *.pyc
+*.egg-info/
+adapters/rust/target/
+scaffolds/python-dashboard2/

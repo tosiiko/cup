@@ -3,7 +3,7 @@ package dev.tosiiko.cup;
 public final class JavaCup {
   public static final String ADAPTER_NAME = "java-cup";
   public static final String PROTOCOL_VERSION = "1";
-  public static final String GENERATOR = "java-cup/0.2.0";
+  public static final String GENERATOR = "java-cup/0.2.4";
 
   private JavaCup() {}
 

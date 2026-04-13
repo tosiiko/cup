@@ -1,2 +1,2 @@
 use ExtUtils::MakeMaker;
-WriteMakefile(NAME => 'CUP', VERSION => '0.2.0');
+WriteMakefile(NAME => 'CUP', VERSION => '0.2.4');

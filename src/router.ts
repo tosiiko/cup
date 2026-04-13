@@ -92,6 +92,8 @@ export interface Router {
   transitioning: Signal<boolean>;
 }
 
+const SCHEMED_HREF_PATTERN = /^[a-z][a-z\d+.-]*:/i;
+
 // ── Route matching ────────────────────────────────────────────────────────────
 
 interface CompiledRoute {
@@ -217,7 +219,7 @@ export function createRouter(options: RouterOptions): Router {
     if (!anchor || anchor.target && anchor.target !== '_self') return;
 
     const href = anchor.getAttribute('href');
-    if (!href || href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:')) {
+    if (!href || href.startsWith('//') || SCHEMED_HREF_PATTERN.test(href)) {
       return;
     }
 

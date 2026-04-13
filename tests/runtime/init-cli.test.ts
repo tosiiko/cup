@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -8,8 +8,8 @@ import { describe, expect, it } from 'vitest';
 const root = process.cwd();
 const cliPath = resolve(root, 'bin', 'cup.mjs');
 
-function runInit(adapter: string, target: string): void {
-  execFileSync(process.execPath, [cliPath, 'init', target, '--adapter', adapter], {
+function runInit(adapter: string, target: string, extraArgs: string[] = []): void {
+  execFileSync(process.execPath, [cliPath, 'init', target, '--adapter', adapter, ...extraArgs], {
     cwd: root,
     stdio: 'pipe',
   });
@@ -18,6 +18,13 @@ function runInit(adapter: string, target: string): void {
 function runInitInCurrentDirectory(adapter: string, cwd: string): void {
   execFileSync(process.execPath, [cliPath, 'init', '--adapter', adapter], {
     cwd,
+    stdio: 'pipe',
+  });
+}
+
+function runUpgrade(target: string): void {
+  execFileSync(process.execPath, [cliPath, 'upgrade', target], {
+    cwd: root,
     stdio: 'pipe',
   });
 }
@@ -37,11 +44,29 @@ describe('cup init cli', () => {
     }
   });
 
-  it('creates a py-cup login scaffold with the vendored runtime', () => {
+  it('creates a py-cup standard scaffold by default', () => {
     const sandbox = mkdtempSync(join(tmpdir(), 'cup-init-py-'));
     try {
       const target = join(sandbox, 'py-demo');
       runInit('py-cup', target);
+
+      expect(existsSync(join(target, 'server.py'))).toBe(true);
+      expect(existsSync(join(target, 'app', 'server.py'))).toBe(true);
+      expect(existsSync(join(target, 'app', 'cup_bridge.py'))).toBe(true);
+      expect(existsSync(join(target, 'cup', 'index.js'))).toBe(true);
+      expect(existsSync(join(target, 'templates', 'shell.html'))).toBe(true);
+      expect(existsSync(join(target, 'vendor', 'py_cup', 'cup.py'))).toBe(false);
+      expect(readFileSync(join(target, 'README.md'), 'utf8')).toContain('standard `py-cup` app scaffold');
+    } finally {
+      rmSync(sandbox, { recursive: true, force: true });
+    }
+  });
+
+  it('still creates the explicit py-cup login scaffold', () => {
+    const sandbox = mkdtempSync(join(tmpdir(), 'cup-init-py-login-'));
+    try {
+      const target = join(sandbox, 'py-login-demo');
+      runInit('py-cup', target, ['--template', 'login']);
 
       expect(existsSync(join(target, 'server.py'))).toBe(true);
       expect(existsSync(join(target, 'cup', 'index.js'))).toBe(true);
@@ -76,8 +101,28 @@ describe('cup init cli', () => {
       runInitInCurrentDirectory('python', sandbox);
 
       expect(existsSync(join(sandbox, 'server.py'))).toBe(true);
+      expect(existsSync(join(sandbox, 'app', 'server.py'))).toBe(true);
       expect(existsSync(join(sandbox, 'cup', 'index.js'))).toBe(true);
-      expect(readFileSync(join(sandbox, 'README.md'), 'utf8')).toContain('py-cup style login demo');
+      expect(readFileSync(join(sandbox, 'README.md'), 'utf8')).toContain('standard `py-cup` app scaffold');
+    } finally {
+      rmSync(sandbox, { recursive: true, force: true });
+    }
+  });
+
+  it('upgrades the vendored runtime in an existing scaffold', () => {
+    const sandbox = mkdtempSync(join(tmpdir(), 'cup-upgrade-'));
+    try {
+      const target = join(sandbox, 'py-demo');
+      runInit('py-cup', target);
+
+      const runtimePath = join(target, 'cup', 'index.js');
+      const original = readFileSync(runtimePath, 'utf8');
+      const sentinel = `${original}\n// local change\n`;
+      writeFileSync(runtimePath, sentinel, 'utf8');
+
+      runUpgrade(target);
+
+      expect(readFileSync(runtimePath, 'utf8')).toBe(original);
     } finally {
       rmSync(sandbox, { recursive: true, force: true });
     }

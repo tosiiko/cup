@@ -20,6 +20,7 @@ const ACTION_KEYS: Record<ActionDescriptor['type'], Set<string>> = {
 };
 const META_KEYS = new Set(['version', 'lang', 'generator', 'title', 'route']);
 const METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
+const ABSOLUTE_URL_PATTERN = /^[a-z][a-z\d+.-]*:\/\//i;
 
 interface ViewCandidate {
   template: string;
@@ -187,13 +188,28 @@ function isPlainObject(input: unknown): input is Record<string, unknown> {
 }
 
 function sanitizeActionURL(url: string): string {
-  if (/^https?:\/\//i.test(url)) {
-    try {
-      const parsed = new URL(url);
-      return `${parsed.pathname || '/'}${parsed.search}${parsed.hash}` || '/';
-    } catch {
-      return '/';
-    }
+  if (ABSOLUTE_URL_PATTERN.test(url) || url.startsWith('//')) {
+    return stripAbsoluteURLOrigin(url);
   }
   return url;
+}
+
+function stripAbsoluteURLOrigin(url: string): string {
+  const withoutScheme = url.startsWith('//')
+    ? url.slice(2)
+    : url.replace(ABSOLUTE_URL_PATTERN, '');
+
+  const slashIndex = withoutScheme.indexOf('/');
+  const queryIndex = withoutScheme.indexOf('?');
+  const hashIndex = withoutScheme.indexOf('#');
+  const delimiterIndex = [slashIndex, queryIndex, hashIndex]
+    .filter((index) => index >= 0)
+    .sort((left, right) => left - right)[0];
+
+  if (delimiterIndex === undefined) {
+    return '/';
+  }
+
+  const suffix = withoutScheme.slice(delimiterIndex);
+  return suffix.startsWith('/') ? suffix : `/${suffix}`;
 }

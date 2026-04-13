@@ -1,8 +1,0 @@
-README.md
-cup.py
-pyproject.toml
-cup_python.egg-info/PKG-INFO
-cup_python.egg-info/SOURCES.txt
-cup_python.egg-info/dependency_links.txt
-cup_python.egg-info/top_level.txt
-tests/test_cup.py

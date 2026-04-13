@@ -7,7 +7,7 @@ import {
 export * from '../../dist/index.js';
 
 export const ADAPTER_NAME = 'node-cup';
-export const ADAPTER_GENERATOR = 'node-cup/0.2.0';
+export const ADAPTER_GENERATOR = 'node-cup/0.2.4';
 export const ADAPTER_LANG = 'node';
 
 export function nodeFetch(url, options = {}) {

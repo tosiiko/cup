@@ -29,10 +29,19 @@ function main(argv) {
   }
 
   const [command, ...rest] = argv;
-  if (command !== 'init') {
-    fail(`unknown command: ${command}`);
+  if (command === 'init') {
+    runInit(rest);
+    return;
+  }
+  if (command === 'upgrade') {
+    runUpgrade(rest);
+    return;
   }
 
+  fail(`unknown command: ${command}`);
+}
+
+function runInit(rest) {
   const options = parseInitArgs(rest);
   const adapter = normalizeAdapter(options.adapter);
   if (!adapter) {
@@ -43,13 +52,10 @@ function main(argv) {
     fail(`adapter "${adapter}" is not runnable in \`cup init\` yet. Supported now: ts-cup, py-cup, node-cup, go-cup`);
   }
 
-  if (options.template !== 'login') {
-    fail(`template "${options.template}" is not available yet. Supported now: login`);
-  }
-
+  const template = resolveTemplate(adapter, options.template);
   const targetDir = resolve(process.cwd(), options.target);
   const projectName = inferProjectName(targetDir);
-  const files = buildScaffold(adapter, projectName);
+  const files = buildScaffold(adapter, template, projectName);
 
   for (const file of files) {
     const destination = resolve(targetDir, file.path);
@@ -66,19 +72,36 @@ function main(argv) {
     }
   }
 
-  console.log(`[CUP] initialized ${adapter} login scaffold in ${relativeOrAbsolute(targetDir)}`);
+  console.log(`[CUP] initialized ${adapter} ${template} scaffold in ${relativeOrAbsolute(targetDir)}`);
   for (const file of files) {
     console.log(`  wrote ${file.path}`);
   }
-  for (const note of notesFor(adapter)) {
+  for (const note of notesFor(adapter, template)) {
     console.log(`  next: ${note}`);
   }
+}
+
+function runUpgrade(rest) {
+  const options = parseUpgradeArgs(rest);
+  const targetDir = resolve(process.cwd(), options.target);
+  const runtimeDestination = resolve(targetDir, 'cup', 'index.js');
+
+  if (!existsSync(runtimeDestination)) {
+    fail(`no vendored runtime found at ${relativeOrAbsolute(runtimeDestination)}. \`cup upgrade\` works on apps that ship a local cup/index.js runtime.`);
+  }
+
+  ensureParentDir(runtimeDestination);
+  copyFileSync(runtimeSource, runtimeDestination);
+
+  console.log(`[CUP] upgraded local runtime in ${relativeOrAbsolute(targetDir)}`);
+  console.log('  wrote cup/index.js');
+  console.log('  next: restart your app if it is already running');
 }
 
 function parseInitArgs(args) {
   let adapter = '';
   let target = '.';
-  let template = 'login';
+  let template = '';
   let force = false;
 
   for (let index = 0; index < args.length; index += 1) {
@@ -104,10 +127,40 @@ function parseInitArgs(args) {
   return { adapter, force, target, template };
 }
 
+function parseUpgradeArgs(args) {
+  let target = '.';
+
+  for (let index = 0; index < args.length; index += 1) {
+    const current = args[index];
+    if (current.startsWith('--')) {
+      fail(`unknown option: ${current}`);
+    }
+    target = current;
+  }
+
+  return { target };
+}
+
 function normalizeAdapter(value) {
   if (!value) return '';
   const normalized = value.trim().toLowerCase();
   return adapterAliases.get(normalized) ?? normalized;
+}
+
+function resolveTemplate(adapter, template) {
+  const normalized = (template || '').trim().toLowerCase();
+
+  if (adapter === 'py-cup') {
+    if (!normalized) return 'standard';
+    if (normalized === 'standard' || normalized === 'login') return normalized;
+    fail(`template "${template}" is not available for py-cup. Supported now: standard, login`);
+  }
+
+  if (!normalized || normalized === 'login') {
+    return 'login';
+  }
+
+  fail(`template "${template}" is not available for ${adapter}. Supported now: login`);
 }
 
 function inferProjectName(targetDir) {
@@ -132,15 +185,19 @@ function fail(message) {
 }
 
 function printUsage() {
-  console.log('usage: cup init [target-dir] --adapter <ts-cup|py-cup|node-cup|go-cup> [--template login] [--force]');
+  console.log('usage: cup init [target-dir] --adapter <ts-cup|py-cup|node-cup|go-cup> [--template login|standard] [--force]');
+  console.log('       cup upgrade [target-dir]');
   console.log('');
   console.log('examples:');
   console.log('  npx @tosiiko/cup init --adapter py-cup');
+  console.log('  npx @tosiiko/cup init --adapter py-cup --template login');
   console.log('  npx @tosiiko/cup init my-ts-login --adapter ts-cup');
   console.log('  npx @tosiiko/cup init services/auth-demo --adapter node-cup');
+  console.log('  npx @tosiiko/cup upgrade');
+  console.log('  npx @tosiiko/cup upgrade services/internal-app');
 }
 
-function notesFor(adapter) {
+function notesFor(adapter, template) {
   switch (adapter) {
     case 'ts-cup':
       return [
@@ -150,7 +207,7 @@ function notesFor(adapter) {
     case 'py-cup':
       return [
         'run `python3 server.py`',
-        'open http://127.0.0.1:8010',
+        `open http://127.0.0.1:${template === 'standard' ? '8050' : '8010'}`,
       ];
     case 'node-cup':
       return [
@@ -167,12 +224,14 @@ function notesFor(adapter) {
   }
 }
 
-function buildScaffold(adapter, projectName) {
+function buildScaffold(adapter, template, projectName) {
   switch (adapter) {
     case 'ts-cup':
       return buildTypeScriptLoginScaffold(projectName);
     case 'py-cup':
-      return buildPythonLoginScaffold(projectName);
+      return template === 'standard'
+        ? buildPythonStandardScaffold()
+        : buildPythonLoginScaffold(projectName);
     case 'node-cup':
       return buildNodeLoginScaffold(projectName);
     case 'go-cup':
@@ -188,6 +247,39 @@ function scaffoldFile(path, content) {
 
 function copiedRuntime(path = 'cup/index.js') {
   return { path, copyFrom: runtimeSource };
+}
+
+function copiedScaffoldTree(relativeRoot) {
+  const sourceRoot = resolve(packageRoot, relativeRoot);
+  return collectScaffoldFiles(sourceRoot);
+}
+
+function collectScaffoldFiles(sourceRoot, relativePath = '') {
+  const currentDir = resolve(sourceRoot, relativePath);
+  const files = [];
+
+  for (const entry of readdirSync(currentDir, { withFileTypes: true })) {
+    if (entry.name === '__pycache__' || entry.name === '.DS_Store') {
+      continue;
+    }
+
+    const entryRelativePath = relativePath ? join(relativePath, entry.name) : entry.name;
+    if (entry.isDirectory()) {
+      files.push(...collectScaffoldFiles(sourceRoot, entryRelativePath));
+      continue;
+    }
+
+    if (entry.name.endsWith('.pyc') || entry.name.endsWith('.pyo')) {
+      continue;
+    }
+
+    files.push({
+      path: entryRelativePath,
+      copyFrom: resolve(sourceRoot, entryRelativePath),
+    });
+  }
+
+  return files;
 }
 
 function buildTypeScriptLoginScaffold(projectName) {
@@ -299,6 +391,13 @@ function buildPythonLoginScaffold(projectName) {
     scaffoldFile('index.html', sharedLoginHtml(`${humanize(projectName)} · py-cup`)),
     scaffoldFile('server.py', pythonLoginServer(projectName)),
     scaffoldFile('vendor/py_cup/cup.py', minimalPyCupModule()),
+    copiedRuntime(),
+  ];
+}
+
+function buildPythonStandardScaffold() {
+  return [
+    ...copiedScaffoldTree(join('scaffolds', 'python-standard')),
     copiedRuntime(),
   ];
 }

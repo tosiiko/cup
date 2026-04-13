@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 
 pub const ADAPTER_NAME: &str = "rs-cup";
-pub const ADAPTER_GENERATOR: &str = "rs-cup/0.2.0";
+pub const ADAPTER_GENERATOR: &str = "rs-cup/0.2.4";
 pub const PROTOCOL_VERSION: &str = "1";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -342,7 +342,7 @@ mod tests {
 
         validate_view(&view).unwrap();
         let json = serde_json::to_string(&view).unwrap();
-        assert!(json.contains("\"generator\":\"rs-cup/0.2.0\""));
+        assert!(json.contains("\"generator\":\"rs-cup/0.2.4\""));
     }
 
     #[test]

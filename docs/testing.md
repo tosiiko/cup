@@ -28,20 +28,20 @@ Covers:
 - TypeScript tests
 - Python adapter tests
 - Go adapter tests
+- packed npm artifact verification, including transport-free core bundle checks
 
 ## Starter And Package Smoke
 
 ```bash
 npm run starter:smoke
 npm run demo:smoke
-npm run pack:check
 ```
 
 These verify:
 
 - official starters boot and return policy-compliant views
 - demos still mount end to end
-- the published npm artifact contains the expected runtime/docs assets
+- the published npm artifact contains the expected runtime/docs assets and no transport markers or source maps
 
 ## What To Add Tests For
 

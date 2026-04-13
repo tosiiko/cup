@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>dev.tosiiko.cup</groupId>
   <artifactId>java-cup</artifactId>
-  <version>0.2.0</version>
+  <version>0.2.4</version>
   <name>java-cup</name>
   <properties>
     <maven.compiler.source>17</maven.compiler.source>

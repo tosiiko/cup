@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+## 0.2.4
+
+- Re-licensed the repository for future releases under Apache-2.0 while preserving the note that already-published npm releases through `0.2.3` remain MIT.
+- Synced the public package, adapters, and contract fixtures to version `0.2.4`.
+- Kept the hardened `cup init` and `cup upgrade` CLI flow as part of the published release artifact.
+
+## 0.2.3
+
+- Removed explicit absolute-URL markers like `http://`, `https://`, and `new URL(...)` from the core bundle's router and repair paths to reduce false-positive network-access classification by static package scanners.
+- Replaced the router's absolute-link interception logic with generic scheme detection instead of hard-coded web URL prefixes.
+- Replaced the repair helper's absolute URL normalization with a generic origin-stripping path that no longer relies on `new URL(...)` in the core bundle.
+- Expanded the packed npm release guard so publishes now fail if the core bundle regains `http://`, `https://`, or `new URL(` markers.
+
+## 0.2.2
+
+- Kept the core `@tosiiko/cup` bundle transport-free and tightened the local release gate so `npm run check` now includes packed-artifact verification before publish.
+- Preserved the package-level guard that rejects any core tarball with transport markers like `globalThis.fetch`, remote loading helpers, or source maps.
+- Made `cup init --adapter py-cup` default to a standard structured Python app scaffold with `app/`, `templates/`, `static/`, `cup/`, and a self-contained local browser runtime.
+- Replaced the generated Python standard scaffold's adapter dependency with a small local plain-dict bridge so generated apps do not vendor the real Python adapter source.
+- Added `cup upgrade` so generated apps can intentionally refresh their local `cup/index.js` runtime snapshot without regenerating the whole project.
+- Expanded init and packed npm smoke coverage so the published CLI must generate the standard `py-cup` app shape and successfully refresh its vendored runtime.
+
+## 0.2.1
+
 - Added a real `cup init` CLI for runnable login scaffolds in the current directory or a target folder.
 - Shipped first-class `init` support for `py-cup`, `go-cup`, `node-cup`, and `ts-cup`.
 - Added release smoke coverage so the packed npm tarball must ship the CLI and generate working starter files.
