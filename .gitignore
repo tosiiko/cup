@@ -8,3 +8,4 @@ __pycache__/
 *.egg-info/
 adapters/rust/target/
 scaffolds/python-dashboard2/
+PLAN.md
